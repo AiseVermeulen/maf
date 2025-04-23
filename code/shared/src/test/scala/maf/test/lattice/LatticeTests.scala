@@ -1,12 +1,13 @@
 package maf.test.lattice
 
 import org.scalacheck.Prop.{forAll, propBoolean}
-import org.scalacheck._
-import org.scalatest.propspec._
+import org.scalacheck.*
+import org.scalatest.propspec.*
 import org.scalatestplus.scalacheck.Checkers
 import maf.core.Lattice
-import maf.lattice._
-import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, RealLattice, StringLattice, SymbolLattice}
+import maf.language.scheme.lattices.{E, ExactLattice, ModularNumberLattice, NumericTowerLattice}
+import maf.lattice.*
+import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, NumberLattice, RealLattice, StringLattice, SymbolLattice}
 import maf.test.LatticeTest
 
 /** TODO[medium] tests for scheme lattice */
@@ -68,6 +69,215 @@ abstract class LatticeTest[L: Lattice](gen: LatticeGenerator[L]) extends Lattice
             p
         }
     checkAll(laws)
+
+given[I: IntLattice, R: RealLattice]: NumericTowerLattice[I, R] = new NumericTowerLattice[I, R]
+abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLattice](gen: LatticeGenerator[(I, R)]) extends LatticeTest[(I, R)](gen):
+    val numbLaws: Properties =
+        newProperties("Numb") { p =>
+            implicit val arb = gen.anyArb
+            val lat: NumericTowerLattice[I, R] = new NumericTowerLattice[I, R]
+            import lat._
+
+            /** Conversion to int preserves bottom */
+            p.property("toInt(⊥) = ⊥") = toInt(bottom)._1 == IntLattice[I].bottom
+
+            /** Conversion to real preserves bottom */
+            p.property("toReal(⊥) = ⊥") = toReal(bottom)._2 == RealLattice[R].bottom
+
+            /** Conversion to real is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ toReal(a) ⊑ toReal(b)") = forAll { (b: (I, R)) =>
+                forAll(gen.le(b)) { (a: (I, R)) =>
+                    conditional(subsumes(b, a), RealLattice[R].subsumes(getReal(toReal(b)), getReal(toReal(a))))
+                }
+            }
+
+            /** Conversion to int is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ toInt(a) ⊑ toInt(b)") = forAll { (b: (I, R)) =>
+                forAll(gen.le(b)) { (a: (I, R)) =>
+                    conditional(subsumes(b, a), IntLattice[I].subsumes(getInt(toInt(b)), getInt(toInt(a))))
+                }
+            }
+
+            /** Conversion to real is sound */
+            p.property("∀ a: inject(a.toDouble) ⊑ toReal(inject(a))") =
+                forAll((a: Int) => RealLattice[R].subsumes(getReal(toReal(inject(a))), RealLattice[R].inject(a.toDouble)))
+
+            /** Integer conversion is sound */
+            p.property("∀ a: a.toInt ⊑ toInt(inject(a))") =
+                 forAll((a: Double) => IntLattice[I].subsumes(getInt(toInt(inject(a))), IntLattice[I].inject(a.toInt)))
+
+            /** Addition preserves bottom */
+            p.property("plus(a, ⊥) = ⊥ = plus(⊥, a)") = forAll((a: (I, R)) => plus(a, bottom)== bottom && plus(bottom, a) == bottom)
+
+            /** Addition is monotone */
+            p.property("∀ a, b, c: b ⊑ c ⇒ plus(a, b) ⊑ plus(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
+                forAll(gen.le(c)) { (b: (I, R)) =>
+                    conditional(subsumes(c, b), subsumes(plus(a, c), plus(a, b)))
+                }
+            }
+
+            /** Addition is sound */
+            p.property("∀ a, b: inject(a + b) ⊑ plus(inject(a), inject(b))") =
+                forAll((a: Int, b: Double) =>
+                    subsumes(plus(inject(BigInt(a)), inject(b)), inject(a + b)))
+
+            /** Addition is associative */
+            p.property("∀ a, b, c: plus(a, plus(b, c)) == plus(plus(a, b), c)") =
+                forAll((a: (I, R), b: (I, R), c: (I, R)) =>
+                    val eerste = plus(a, plus(b, c))
+                    val tweede = plus(plus(a, b), c)
+                    if eerste != tweede then
+                        println(eerste)
+                        println(tweede)
+
+                    eerste == tweede
+                )
+
+            /** Addition is commutative */
+            p.property("∀ a, b: plus(a, b) == plus(b, a)") = forAll((a: (I, R), b: (I, R)) => plus(a, b) == plus(b, a))
+
+            /** Subtraction preserves bottom */
+            p.property("minus(a, ⊥) = ⊥ = minus(⊥, a)") = forAll((a: (I, R)) => minus(a, bottom) == bottom && minus(bottom, a) == bottom)
+
+            /** Subtraction is monotone */
+            p.property("∀ a, b, c: b ⊑ c ⇒ minus(a, b) ⊑ minus(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
+                forAll(gen.le(c)) { (b: (I, R)) =>
+                    conditional(subsumes(c, b), subsumes(minus(a, c), minus(a, b)))
+                }
+            }
+
+            /** Subtraction is sound */
+            p.property("∀ a, b: inject(a - b) ⊑ minus(inject(a), inject(b))") =
+                forAll((a: BigInt, b: BigInt) => subsumes(minus(inject(a), inject(b)), inject(a - b)))
+
+            /** Subtraction is anticommutative */
+            p.property("∀ a, b: minus(a, b) == minus(inject(0), minus(b, a))") = forAll((a: (I, R), b: (I, R)) => minus(a, b) == minus(inject(0), minus(b, a)))
+
+            /** Multiplication preserves bottom */
+            p.property("times(a, ⊥) = ⊥ = times(⊥, a)") = forAll((a: (I, R)) => times(a, bottom) == bottom && times(bottom, a) == bottom)
+
+            /** Multiplication is monotone */
+            p.property("∀ a, b, c: b ⊑ c ⇒ times(a, b) ⊑ times(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
+                forAll(gen.le(c)) { (b: (I, R)) =>
+                    conditional(subsumes(c, b), subsumes(times(a, c), times(a, b)))
+                }
+            }
+
+            /** Multiplication is sound */
+            p.property("∀ a, b: inject(a * b) ⊑ times(inject(a), inject(b))") =
+                forAll((a: BigInt, b: BigInt) => subsumes(times(inject(a), inject(b)), inject(a * b)))
+
+            /** Multiplication is associative */
+            p.property("∀ a, b, c: times(a, times(b, c)) == times(times(a, b), c)") =
+                forAll((a: (I, R), b: (I, R), c: (I, R)) => times(a, times(b, c)) == times(times(a, b), c))
+
+            /** Multiplication is commutative */
+            p.property("∀ a, b: times(a, b) == times(b, a)") = forAll((a: (I, R), b: (I, R)) => times(a, b) == times(b, a))
+
+            /** Quotient preserves bottom */
+            p.property("div(a, ⊥) = ⊥ = div(⊥, a)") =
+                forAll((a: (I, R)) => quotient(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), quotient(bottom, a) == bottom))
+
+            /** Quotient is monotone */
+            p.property("∀ a, b, c: b ⊑ c ⇒ div(a, b) ⊑ div(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
+                forAll(gen.le(c)) { (b: (I, R)) =>
+                    conditional(subsumes(c, b) && !subsumes(b, inject(0)) && !subsumes(c, inject(0)), subsumes(quotient(a, c), quotient(a, b)))
+                }
+            }
+
+            /** Quotient is sound */
+            p.property("∀ a, b ≠ 0: inject(a / b) ⊑ div(inject(a), inject(b))") = {
+                forAll((a: BigInt, b: BigInt) => conditional(b != 0, subsumes(quotient(inject(a), inject(b)), inject(a / b))))
+            }
+
+            /** Modulo preserves bottom */
+            p.property("modulo(a, ⊥) = ⊥ = modulo(⊥, a)") =
+                forAll((a: (I, R)) => modulo(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), modulo(bottom, a) == bottom))
+
+            /** Modulo is monotone */
+            p.property("∀ a, b, c: b ⊑ c ⇒ modulo(a, b) ⊑ modulo(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
+                forAll(gen.le(c)) { (b: (I, R)) =>
+                    conditional(subsumes(c, b) && !subsumes(c, inject(0)) && !subsumes(b, inject(0)), subsumes(modulo(a, c), modulo(a, b)))
+                }
+            }
+
+            /** Modulo is sound */
+            p.property("∀ a, b ≠ 0: inject(a / b) ⊑ modulo(inject(a), inject(b))") =
+                forAll((a: BigInt, b: BigInt) =>
+                    conditional(b != 0, subsumes(modulo(inject(a), inject(b)), inject(MathOps.modulo(a, b)))))
+
+            /** Remainder preserves bottom */
+            p.property("rem(a, ⊥) = ⊥ = rem(⊥, a) (if a ≠ 0)") =
+                forAll((a: (I, R)) => remainder(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), remainder(bottom, a) == bottom))
+
+            /** Remainder is monotone */
+            p.property("∀ a, b, c: b ⊑ c ⇒ rem(a, b) ⊑ rem(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
+                forAll(gen.le(c)) { (b: (I, R)) =>
+                    conditional(subsumes(c, b) && !subsumes(c, inject(0)) && !subsumes(b, inject(0)), subsumes(remainder(a, c), remainder(a, b)))
+                }
+            }
+
+            /** Remainder is sound */
+            p.property("∀ a, b ≠ 0: inject(a / b) ⊑ rem(inject(a), inject(b))") =
+                forAll((a: BigInt, b: BigInt) => conditional(b != 0, subsumes(remainder(inject(a), inject(b)), inject(MathOps.remainder(a, b)))))
+
+            /** Less-than operation preserves bottom */
+            p.property("lt(a, ⊥) = ⊥ = lt(⊥, a)") =
+                forAll((a: (I, R)) => lt[B](a, bottom) == BoolLattice[B].bottom && lt[B](bottom, a) == BoolLattice[B].bottom)
+
+            /** Less-than operation is monotone */
+            p.property("∀ a, b, c: b ⊑ c ⇒ lt(a, b) ⊑ lt(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
+                forAll(gen.le(c)) { (b: (I, R)) =>
+                    conditional(subsumes(b, c), BoolLattice[B].subsumes(lt[B](a, c), lt[B](a, b)))
+                }
+            }
+
+            /** Less-than operation is sound */
+            p.property("∀ a, b ≠ 0: inject(a < b) ⊑ lt(inject(a), inject(b))") ={
+                forAll((a: BigInt, b: BigInt) => BoolLattice[B].subsumes(lt[B](inject(a), inject(b)), BoolLattice[B].inject(a < b)))
+            }
+
+            /** Ceiling preserves bottom */
+            p.property("ceiling(⊥) = ⊥") = ceiling(bottom) == bottom
+
+            /** Ceiling is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ ceiling(a) ⊑ ceiling(b)") = forAll { (b: (I, R)) =>
+                forAll(gen.le(b)) { (a: (I, R)) =>
+                    conditional(subsumes(b, a), subsumes(ceiling(b), ceiling(a)))
+                }
+            }
+
+            /** Ceiling is sound */
+            p.property("∀ a: inject(a.ceil) ⊑ ceiling(inject(a))") =
+                forAll((a: Double) => subsumes(ceiling(inject(a)), inject(MathOps.ceil(a).toInt)))
+
+            /** Log preserves bottom */
+            p.property("log(⊥) = ⊥") = log(bottom) == bottom
+
+            /** Log is sound */
+            p.property("∀ a: inject(a.log) ⊑ log(inject(a))") =
+                forAll((a: Double) => conditional(a > 0, subsumes(log(inject(a)), inject(scala.math.log(a)))))
+
+            p
+        }
+    checkAll(numbLaws)
+
+given ExactLattice = new ExactLattice
+abstract class ExactLatticeTest(gen: LatticeGenerator[E]) extends LatticeTest[E](gen):
+    val exactLaws: Properties =
+        newProperties("Exact") { p =>
+            implicit val arb = gen.anyArb
+            val lat: ExactLattice = new ExactLattice
+            import lat._
+
+            p.property("test") = true
+
+            p.property("test2") = true
+
+            p
+
+        }
+    checkAll(exactLaws)
 
 abstract class BoolLatticeTest[B: BoolLattice](gen: LatticeGenerator[B]) extends LatticeTest[B](gen):
     val boolLaws: Properties =
@@ -495,3 +705,7 @@ class ConstantPropagationRealTest
     extends RealLatticeTest[ConstantPropagation.R, Concrete.B, ConstantPropagation.I, ConstantPropagation.S](ConstantPropagationRealGenerator)
 class ConstantPropagationCharTest extends CharLatticeTest[ConstantPropagation.C](ConstantPropagationCharGenerator)
 class ConstantPropagationSymbolTest extends SymbolLatticeTest[ConstantPropagation.Sym](ConstantPropagationSymbolGenerator)
+
+class ELTest extends ExactLatticeTest(ExactLatticeGenerator)
+class ConstantPropagationNumericTowerTest extends NumericTowerLatticeTest[ConstantPropagation.I, ConstantPropagation.R, ConstantPropagation.B](ConstantPropagationNumericTowerGenerator)
+class ConcreteNumericTowerTest extends NumericTowerLatticeTest[Concrete.I, Concrete.R, Concrete.B](ConcreteNumericTowerGenerator)

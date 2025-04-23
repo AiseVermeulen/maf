@@ -19,7 +19,8 @@ object PrecisionComparison
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
-      ConstantPropagation.Sym
+      ConstantPropagation.Sym, 
+      ConstantPropagation.Comp
     ]:
     val benchmarks =
         SchemeBenchmarkPrograms.gabriel ++

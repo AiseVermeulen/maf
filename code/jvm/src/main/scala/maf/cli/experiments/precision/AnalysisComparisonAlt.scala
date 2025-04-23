@@ -1,17 +1,17 @@
 package maf.cli.experiments.precision
 
-import maf.cli.experiments._
-import maf.language.scheme._
-import maf.lattice._
-import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, RealLattice, StringLattice, SymbolLattice}
-import maf.util.benchmarks._
+import maf.cli.experiments.*
+import maf.language.scheme.*
+import maf.lattice.*
+import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, NumberLattice, RealLattice, StringLattice, SymbolLattice}
+import maf.util.benchmarks.*
 import maf.util.{Reader, Writer}
 import maf.language.scheme.primitives.SchemePrelude
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-abstract class AnalysisComparisonAlt[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice]
-    extends PrecisionBenchmarks[Num, Rea, Bln, Chr, Str, Smb]:
+abstract class AnalysisComparisonAlt[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Complex: NumberLattice]
+    extends PrecisionBenchmarks[Num, Rea, Bln, Chr, Str, Smb, Complex]:
 
     // the precision comparison is parameterized by:
     // - the analyses to compare in terms of precision
@@ -73,7 +73,8 @@ object AnalysisComparisonAlt1
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
-      ConstantPropagation.Sym
+      ConstantPropagation.Sym, 
+      ConstantPropagation.Comp
     ]:
     def k = 0
     def ls = List(100)

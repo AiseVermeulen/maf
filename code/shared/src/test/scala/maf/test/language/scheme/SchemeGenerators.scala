@@ -85,6 +85,7 @@ abstract class ModularSchemeLatticeGenerator[S: StringLattice, B: BoolLattice, I
             str <- pickAtMost(1, SchemeVLatticeGenerator.anyStrV)
             bln <- pickAtMost(1, SchemeVLatticeGenerator.anyBlnV)
             int <- pickAtMost(1, SchemeVLatticeGenerator.anyIntV)
+            num <- pickAtMost(1, SchemeVLatticeGenerator.anyNumV)
             rea <- pickAtMost(1, SchemeVLatticeGenerator.anyReaV)
             chr <- pickAtMost(1, SchemeVLatticeGenerator.anyChrV)
             sym <- pickAtMost(1, SchemeVLatticeGenerator.anySymV)
@@ -119,6 +120,7 @@ abstract class ModularSchemeLatticeGenerator[S: StringLattice, B: BoolLattice, I
         yield ((lam, emptyEnv))
         // a generator for each type of value
         val anyNilV: Gen[V] = Gen.const(modularLattice.Nil)
+        val anyNumV: Gen[V] = intGen.any.retryUntil(_ != IntLattice[I].bottom).map(modularLattice.makeNumb(_))
         val anyIntV: Gen[V] = intGen.any.retryUntil(_ != IntLattice[I].bottom).map(modularLattice.Int(_))
         val anyStrV: Gen[V] = strGen.any.retryUntil(_ != StringLattice[S].bottom).map(modularLattice.Str(_))
         val anyBlnV: Gen[V] = blnGen.any.retryUntil(_ != BoolLattice[B].bottom).map(modularLattice.Bool(_))

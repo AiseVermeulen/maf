@@ -26,10 +26,11 @@ trait ProvideModularLattice extends SchemeDomain:
     type R
     type C
     type Sym
+    type Comp
 
-    lazy val modularLattice: ModularSchemeLattice[Address, S, B, I, R, C, Sym]
+    lazy val modularLattice: ModularSchemeLattice[Address, S, B, I, R, C, Sym, Comp]
 
-    def convertValue(baseDomain: ModularSchemeLattice[Address, S, B, I, R, C, Sym])(value: Value): baseDomain.L
+    def convertValue(baseDomain: ModularSchemeLattice[Address, S, B, I, R, C, Sym, Comp])(value: Value): baseDomain.L
 
 trait ModularSchemeDomain extends SchemeDomain:
     val modularLatticeWrapper: ModularSchemeLatticeWrapper
@@ -56,8 +57,9 @@ trait ModularSchemeLatticeWrapper:
     type R
     type C
     type Sym
+    type Comp
     // holds a modular lattice
-    val modularLattice: ModularSchemeLattice[Address, S, B, I, R, C, Sym]
+    val modularLattice: ModularSchemeLattice[Address, S, B, I, R, C, Sym, Comp]
     val primitives: SchemePrimitives[modularLattice.L, Address]
 
 //
@@ -73,6 +75,7 @@ object SchemeTypeDomain extends ModularSchemeLatticeWrapper:
     type R = Type.R
     type C = Type.C
     type Sym = Type.Sym
+    type Comp = Type.Comp
     // make the scheme lattice
     final val modularLattice = new ModularSchemeLattice
     final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
@@ -93,6 +96,7 @@ object SchemeConstantPropagationDomain extends ModularSchemeLatticeWrapper:
     type R = ConstantPropagation.R
     type C = ConstantPropagation.C
     type Sym = ConstantPropagation.Sym
+    type Comp = ConstantPropagation.Comp
     // make the scheme lattice
     final val modularLattice = new ModularSchemeLattice
     final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
@@ -114,6 +118,7 @@ object SchemePowersetDomain extends ModularSchemeLatticeWrapper:
     type R = Concrete.R
     type C = Concrete.C
     type Sym = Concrete.Sym
+    type Comp = Concrete.Comp
     // make the scheme lattice
     final val modularLattice = new ModularSchemeLattice
     final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
@@ -133,6 +138,7 @@ class SchemeBoundedDomainWrapper(val bound: Int) extends ModularSchemeLatticeWra
     type R = Bounded.R
     type C = Bounded.C
     type Sym = Bounded.Sym
+    type Comp = Bounded.Comp
     final val modularLattice = new ModularSchemeLattice
     final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
 

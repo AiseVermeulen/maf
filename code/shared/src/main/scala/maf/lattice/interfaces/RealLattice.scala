@@ -6,6 +6,7 @@ import maf.core.Lattice
 trait RealLattice[R] extends Lattice[R] { self =>
     def inject(n: Double): R
     def toInt[I: IntLattice](n: R): I
+    def toComplex[Comp: NumberLattice](n: R): Comp
     def ceiling(n: R): R
     def floor(n: R): R
     def round(n: R): R

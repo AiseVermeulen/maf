@@ -49,6 +49,8 @@ object SchemeOp:
     case object IsProcedure extends SchemeOp1("proc?") with TypeOp
     case object IsInputPort extends SchemeOp1("input-port?") with TypeOp
     case object IsOutputPort extends SchemeOp1("output-port?") with TypeOp
+    case object IsExact extends SchemeOp1("exact?") with RealOp
+    case object IsInexact extends SchemeOp1("inexact?") with RealOp
     case object Not extends SchemeOp1("not") with BoolOp
     case object Ceiling extends SchemeOp1("ceiling") with RealOp
     case object Floor extends SchemeOp1("floor") with RealOp
@@ -102,6 +104,8 @@ object SchemeOp:
       IsInputPort,
       IsOutputPort,
       IsNumber,
+      IsExact,
+      IsInexact,
       Not,
       Ceiling,
       Floor,

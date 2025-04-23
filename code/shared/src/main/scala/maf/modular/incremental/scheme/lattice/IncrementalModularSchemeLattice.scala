@@ -21,8 +21,9 @@ class IncrementalModularSchemeLattice[
     I: IntLattice,
     R: RealLattice,
     C: CharLattice,
-    Sym: SymbolLattice]
-    extends ModularSchemeLattice[A, S, B, I, R, C, Sym]:
+    Sym: SymbolLattice, 
+    Comp: NumberLattice]
+    extends ModularSchemeLattice[A, S, B, I, R, C, Sym, Comp]:
 
     import Elements.*
 

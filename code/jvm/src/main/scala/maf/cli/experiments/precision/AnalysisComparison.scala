@@ -1,16 +1,16 @@
 package maf.cli.experiments.precision
 
-import maf.cli.experiments._
-import maf.language.scheme._
-import maf.lattice._
-import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, RealLattice, StringLattice, SymbolLattice}
-import maf.util._
-import maf.util.benchmarks._
+import maf.cli.experiments.*
+import maf.language.scheme.*
+import maf.lattice.*
+import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, NumberLattice, RealLattice, StringLattice, SymbolLattice}
+import maf.util.*
+import maf.util.benchmarks.*
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-abstract class AnalysisComparison[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice]
-    extends PrecisionBenchmarks[Num, Rea, Bln, Chr, Str, Smb]:
+abstract class AnalysisComparison[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Complex: NumberLattice]
+    extends PrecisionBenchmarks[Num, Rea, Bln, Chr, Str, Smb, Complex]:
 
     // the precision comparison is parameterized by:
     // - the base analysis (= lowest precision) to compare to
@@ -61,7 +61,8 @@ object AnalysisComparison1
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
-      ConstantPropagation.Sym
+      ConstantPropagation.Sym,
+      ConstantPropagation.Comp
     ]:
     val k = 0
     val l = 1000

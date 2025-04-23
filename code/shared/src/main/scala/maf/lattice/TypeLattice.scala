@@ -1,7 +1,7 @@
 package maf.lattice
 
-import maf.core._
-import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, NotANumberString, RealLattice, StringLattice, SymbolLattice}
+import maf.core.*
+import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, NotANumberString, NumberLattice, RealLattice, StringLattice, SymbolLattice}
 
 object Type:
     sealed trait T:
@@ -39,6 +39,7 @@ object Type:
     type R = T
     type C = T
     type Sym = T
+    type Comp = T
 
     object T:
 
@@ -129,6 +130,32 @@ object Type:
             def lt[B2: BoolLattice](n1: T, n2: T): B2 = (n1, n2) match
                 case (Top, Top) => BoolLattice[B2].top
                 case _          => BoolLattice[B2].bottom
+            def toString[S2: StringLattice](n: T): S2 = n.to[S2]
+        }
+
+        implicit val typeIsComplex: NumberLattice[Comp] = new BaseInstance("Complex") with NumberLattice[Comp] {
+            def inject(x: Double): T = Top
+            def toInt[I2: IntLattice](n: T): I2 = n.to[I2]
+            def ceiling(n: T): T = n
+            def floor(n: T): T = n
+            def round(n: T): T = n
+            def log(n: T): T = n
+            def random(n: T): T = n
+            def sin(n: T): T = n
+            def asin(n: T): T = n
+            def cos(n: T): T = n
+            def acos(n: T): T = n
+            def tan(n: T): T = n
+            def atan(n: T): T = n
+            def sqrt(n: T): T = n
+            def plus(n1: T, n2: T): T = meet(n1, n2)
+            def minus(n1: T, n2: T): T = meet(n1, n2)
+            def times(n1: T, n2: T): T = meet(n1, n2)
+            def div(n1: T, n2: T): T = meet(n1, n2)
+            def expt(n1: T, n2: T): T = meet(n1, n2)
+            def lt[B2: BoolLattice](n1: T, n2: T): B2 = (n1, n2) match
+                case (Top, Top) => BoolLattice[B2].top
+                case _ => BoolLattice[B2].bottom
             def toString[S2: StringLattice](n: T): S2 = n.to[S2]
         }
         implicit val typeIsChar: CharLattice[C] = new BaseInstance("Char") with CharLattice[C] {

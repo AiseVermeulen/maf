@@ -8,8 +8,8 @@ import maf.language.AContractScheme.AContractSchemeLattice
 import maf.lattice.AbstractSetType
 import maf.lattice.HMap
 
-class AContractSchemeModularLattice[A <: Address, S: StringLattice, B: BoolLattice, I: IntLattice, R: RealLattice, C: CharLattice, Sym: SymbolLattice]
-    extends ASchemeModularLattice[A, S, B, I, R, C, Sym],
+class AContractSchemeModularLattice[A <: Address, S: StringLattice, B: BoolLattice, I: IntLattice, R: RealLattice, C: CharLattice, Sym: SymbolLattice, Comp: NumberLattice]
+    extends ASchemeModularLattice[A, S, B, I, R, C, Sym, Comp],
       AContractSchemeLattice[HMap, A]:
 
     object EnsuresCT extends AbstractSetType[EnsuresC[L], EnsuresCTs]:

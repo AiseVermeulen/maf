@@ -7,6 +7,7 @@ trait IntLattice[I] extends Lattice[I] { self =>
     def inject(n: BigInt): I
 
     def toReal[R: RealLattice](n: I): R
+    def toComplex[Comp: NumberLattice](n: I): Comp
     def random(n: I): I
     def plus(n1: I, n2: I): I
     def minus(n1: I, n2: I): I

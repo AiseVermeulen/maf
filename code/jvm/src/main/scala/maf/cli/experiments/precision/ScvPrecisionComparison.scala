@@ -27,7 +27,8 @@ object ScvPrecisionComparison
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
-      ConstantPropagation.Sym
+      ConstantPropagation.Sym,
+      ConstantPropagation.Comp
     ]:
 
     def analyses: List[(SchemeExp => Analysis, String)] = List(

@@ -1,19 +1,20 @@
 package maf.language.scheme.lattices
 
 import maf.language.racket.*
-import maf.core._
+import maf.core.*
 import maf.lattice.{AbstractSetType, AbstractType, AbstractWrapType, HMap, HMapKey, NoExtract, NoInject}
 import maf.util.MonoidImplicits.*
 import maf.language.CScheme.TID
-import maf.language.ContractScheme.ContractValues._
+import maf.language.ContractScheme.ContractValues.*
 import maf.language.AScheme.ASchemeValues.{Actor, Behavior}
 import maf.language.scheme.primitives.SchemePrimitive
-import maf.lattice.interfaces._
-import maf.util.datastructures.SmartUnion._
-import maf.util._
+import maf.lattice.interfaces.*
+import maf.util.datastructures.SmartUnion.*
+import maf.util.*
 import smtlib.theories.Core.False
 import maf.language.AScheme.ASchemeValues.Future
 import maf.language.AScheme.ASchemeLattice
+import spire.math.Complex
 
 /**
  * Defines a Scheme lattice based on other lattices. Example usage: val address = NameAddress val lattice = new ModularSchemeLattice[SchemeExp,
@@ -21,19 +22,29 @@ import maf.language.AScheme.ASchemeLattice
  * available in the current scope.
  */
 /** TODO[medium]: use Show and ShowStore here */
-class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: IntLattice, R: RealLattice, C: CharLattice, Sym: SymbolLattice]
+class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: IntLattice, R: RealLattice, C: CharLattice, Sym: SymbolLattice, Comp: NumberLattice]
     extends Serializable
     with SchemeLattice[HMap, A]:
 
     trait ModularSchemeConvertor[BaseAddr <: Address, V]:
         def convertAddr(addr: Address): BaseAddr
-        def convertValue(baseDomain: ModularSchemeLattice[A, S, B, I, R, C, Sym])(v: V): baseDomain.L
+        def convertValue(baseDomain: ModularSchemeLattice[A, S, B, I, R, C, Sym, Comp])(v: V): baseDomain.L
+        
+        
 
     // TODO: make this a type parameter for type safety!
     type K = Any
 
     type P = SchemePrimitive[L, A]
-
+    
+    type N = (E, (I, R, Comp)) 
+    given NumberLattice[N] = new ModularNumberLattice[I, R, Comp]
+    
+    sealed trait Number
+    
+    final case class IntN(n: BigInt) extends Number
+    final case class RealN(n: Double) extends Number
+    
     implicit def mfAddrMonoid[X]: Monoid[MayFail[Set[X], Error]] = MonoidImplicits.mayFail[Set[X]](MonoidImplicits.setMonoid[X])
 
     object StrT extends AbstractWrapType[S, Str]:
@@ -50,11 +61,23 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
         type Inject = BigInt
         override def inject(v: Inject): Abstract = IntLattice[I].inject(v)
         def wrap = Int.apply
-
+    
     object RealT extends AbstractWrapType[R, Real]:
         type Inject = Double
         override def inject(v: Inject): Abstract = RealLattice[R].inject(v)
         def wrap = Real.apply
+        
+    object ComplexT extends AbstractWrapType[Comp, Compl]: 
+        type Inject = Complex[Double]
+        override def inject(v: Inject): Abstract = NumberLattice[Comp].inject(v)
+        def wrap = Compl.apply
+    
+    object NumbT extends AbstractWrapType[N, Numb]:
+        type Inject = Number
+        override def inject(v: Inject): Abstract = v match
+            case IntN(v) => NumberLattice[N].inject(v)
+            case RealN(v) => NumberLattice[N].inject(v)
+        def wrap = Numb.apply
 
     object CharT extends AbstractWrapType[C, Char]:
         type Inject = scala.Char
@@ -122,14 +145,14 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                 val vWithEls1Joined = els1.foldLeft(vSizeInitJoined)({ case (acc, (k, v)) =>
                     // potentially unsafe, should really be improved
                     Value
-                        .vectorSet(acc, Int(k), v)
+                        .vectorSet(acc, Numb(ModularNumberLattice[I, R, Comp].ItoModularNumber(k)), v)
                         .map(v => v.get(VecT)(using Default.errorIfDefault))
                         .getOrElse(throw new Exception("operation failed"))
                 })
                 val vWithEls2Joined = els2.foldLeft(vWithEls1Joined)({ case (acc, (k, v)) =>
                     // potentially unsafe, should really be improved
                     Value
-                        .vectorSet(acc, Int(k), v)
+                        .vectorSet(acc, Numb(ModularNumberLattice[I, R, Comp].ItoModularNumber(k)), v)
                         .map(v => v.get(VecT)(using Default.errorIfDefault))
                         .getOrElse(throw new Exception("operation failed"))
                 })
@@ -224,18 +247,34 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
         def typeName = "BOOL"
         val tpy = BoolT
         override def toString: String = BoolLattice[B].show(b)
-
+    
     case class Int(i: I) extends Value, Product1[I]:
         def ord = 2
         def typeName = "INTE"
         val tpy = IntT
         override def toString: String = IntLattice[I].show(i)
-
+    
     case class Real(r: R) extends Value, Product1[R]:
         def ord = 3
         def typeName = "REAL"
         val tpy = RealT
         override def toString: String = RealLattice[R].show(r)
+
+    case class Compl(c: Comp) extends Value, Product1[Comp]:
+        def ord = 3
+        def typeName = "COMPLEX"
+        val tpy = ComplexT
+        override def toString: String = NumberLattice[Comp].show(c)
+    
+    case class Numb(n: N) extends Value, Product1[N]:
+        def ord = 3
+        def typeName = "NUMBER"
+        val tpy = NumbT
+        override def toString: String = ModularNumberLattice[I, R, Comp].show(n)
+
+    def makeNumb(i: I): Numb =
+        Numb((exact, (i, RealLattice[R].bottom, NumberLattice[Comp].bottom)))    
+
     case class Char(c: C) extends Value, Product1[C]:
         def ord = 4
         def typeName = "CHAR"
@@ -460,13 +499,12 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                     })
                 case IsInteger =>
                     MayFail.success(args(0) match {
-                        case _: Int => True
+                        case numb: Numb => if IntLattice[I].isBottom(numb.n._2._1) then False else True
                         case _      => False
                     })
                 case IsReal =>
                     MayFail.success(args(0) match {
-                        case _: Real => True
-                        case _: Int  => True
+                        case numb: Numb => if RealLattice[R].isBottom(numb.n._2._2) then False else True
                         case _       => False
                     })
                 case IsBoolean =>
@@ -477,7 +515,7 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                     })
                 case IsNumber =>
                     MayFail.success(args(0) match {
-                        case (_: Real) | (_: Int) => True
+                        case _: Numb => True
                         case _                    => False
                     })
 
@@ -523,85 +561,74 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                     })
                 case Ceiling =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Int(n))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].ceiling(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].ceiling(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("ceiling", args))
                 case Floor =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Int(n))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].floor(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].floor(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("floor", args))
                 case Round =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Int(n))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].round(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].round(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("round", args))
                 case Log =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(RealLattice[R].log(IntLattice[I].toReal(n))))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].log(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].log(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("log", args))
                 case Random =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Int(IntLattice[I].random(n)))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].random(n)))
+                        //case Int(n)  => MayFail.success(Int(IntLattice[I].random(n)))
+                        //case Real(n) => MayFail.success(Real(RealLattice[R].random(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("random", args))
                 case Sin =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(RealLattice[R].sin(IntLattice[I].toReal(n))))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].sin(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].sin(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("sin", args))
                 case ASin =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(RealLattice[R].asin(IntLattice[I].toReal(n))))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].asin(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].asin(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("asin", args))
                 case Cos =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(RealLattice[R].cos(IntLattice[I].toReal(n))))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].cos(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].cos(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("cos", args))
                 case ACos =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(RealLattice[R].acos(IntLattice[I].toReal(n))))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].acos(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].acos(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("acos", args))
                 case Tan =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(RealLattice[R].tan(IntLattice[I].toReal(n))))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].tan(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].tan(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("tan", args))
                 case ATan =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(RealLattice[R].atan(IntLattice[I].toReal(n))))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].atan(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].atan(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("atan", args))
                 case Sqrt =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(RealLattice[R].sqrt(IntLattice[I].toReal(n))))
-                        case Real(n) => MayFail.success(Real(RealLattice[R].sqrt(n)))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].sqrt(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("sqrt", args))
                 case VectorLength =>
                     args(0) match
-                        case Vec(size, _) => MayFail.success(Int(size))
+                        case Vec(size, _) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].ItoModularNumber(size)))
                         case _            => MayFail.failure(OperatorNotApplicable("vector-length", args))
                 case StringLength =>
                     args(0) match
-                        case Str(s) => MayFail.success(Int(StringLattice[S].length(s)))
+                        case Str(s) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].ItoModularNumber(StringLattice[S].length(s))))
                         case _      => MayFail.failure(OperatorNotApplicable("string-length", args))
                 case NumberToString =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Str(IntLattice[I].toString(n)))
-                        case Real(n) => MayFail.success(Str(RealLattice[R].toString(n)))
+                        //case Int(n)  => MayFail.success(Str(IntLattice[I].toString(n)))
+                        //case Real(n) => MayFail.success(Str(RealLattice[R].toString(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("number->string", args))
                 case StringToNumber =>
                     args(0) match
                         // TODO: string may also be a float!
-                        case Str(s) => StringLattice[S].toNumber(s).map(Int.apply)
+                        //case Str(s) => StringLattice[S].toNumber(s).map(Int.apply)
                         case _      => MayFail.failure(OperatorNotApplicable("string->number", args))
                 case IntegerToCharacter =>
                     args(0) match
-                        case Int(i) => MayFail.success(Char(IntLattice[I].toChar(i)))
+                        //case Int(i) => MayFail.success(Char(IntLattice[I].toChar(i)))
                         case _      => MayFail.failure(OperatorNotApplicable("integer->char", args))
                 case SymbolToString =>
                     args(0) match
@@ -613,17 +640,15 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                         case _      => MayFail.failure(OperatorNotApplicable("string->symbol", args))
                 case ExactToInexact =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Real(IntLattice[I].toReal(n)))
-                        case Real(n) => MayFail.success(Real(n))
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].exactToInexact(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("exact->inexact", args))
                 case InexactToExact =>
                     args(0) match
-                        case Int(n)  => MayFail.success(Int(n))
-                        case Real(n) => MayFail.success(Int(RealLattice[R].toInt[I](n))) /* should introduce fractions */
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].inexactToExact(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("inexact->exact", args))
                 case CharacterToInteger =>
                     args(0) match
-                        case Char(c) => MayFail.success(Int(CharLattice[C].toInt[I](c)))
+                        case Char(c) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].ItoModularNumber(CharLattice[C].toInt[I](c))))
                         case _       => MayFail.failure(OperatorNotApplicable("char->integer", args))
                 case CharacterToString =>
                     args(0) match
@@ -647,68 +672,47 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                         case _       => MayFail.failure(OperatorNotApplicable("char-upper-case?", args))
                 case Plus =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2))   => MayFail.success(Int(IntLattice[I].plus(n1, n2)))
-                        case (Int(n1), Real(n2))  => MayFail.success(Real(RealLattice[R].plus(IntLattice[I].toReal(n1), n2)))
-                        case (Real(n1), Int(n2))  => MayFail.success(Real(RealLattice[R].plus(n1, IntLattice[I].toReal(n2))))
-                        case (Real(n1), Real(n2)) => MayFail.success(Real(RealLattice[R].plus(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Numb(NumberLattice[N].plus(n1, n2)))
                         case _                    => MayFail.failure(OperatorNotApplicable("+", args))
                 case Minus =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2))   => MayFail.success(Int(IntLattice[I].minus(n1, n2)))
-                        case (Int(n1), Real(n2))  => MayFail.success(Real(RealLattice[R].minus(IntLattice[I].toReal(n1), n2)))
-                        case (Real(n1), Int(n2))  => MayFail.success(Real(RealLattice[R].minus(n1, IntLattice[I].toReal(n2))))
-                        case (Real(n1), Real(n2)) => MayFail.success(Real(RealLattice[R].minus(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].minus(n1, n2)))
                         case _                    => MayFail.failure(OperatorNotApplicable("-", args))
                 case Times =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2))   => MayFail.success(Int(IntLattice[I].times(n1, n2)))
-                        case (Int(n1), Real(n2))  => MayFail.success(Real(RealLattice[R].times(IntLattice[I].toReal(n1), n2)))
-                        case (Real(n1), Int(n2))  => MayFail.success(Real(RealLattice[R].times(n1, IntLattice[I].toReal(n2))))
-                        case (Real(n1), Real(n2)) => MayFail.success(Real(RealLattice[R].times(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].times(n1, n2)))
                         case _                    => MayFail.failure(OperatorNotApplicable("*", args))
                 case Quotient =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2)) =>
-                            try MayFail.success(Int(IntLattice[I].quotient(n1, n2)))
+                        case (Numb(n1), Numb(n2)) =>
+                            try MayFail.success(Numb(ModularNumberLattice[I, R, Comp].quotient(n1, n2)))
                             catch
                                 case _: ArithmeticException =>
                                     MayFail.failure(OperatorNotApplicable("quotient", args))
                         case _ => MayFail.failure(OperatorNotApplicable("quotient", args))
                 case Div =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2))   => MayFail.success(Real(IntLattice[I].div[R](n1, n2)))
-                        case (Int(n1), Real(n2))  => MayFail.success(Real(RealLattice[R].div(IntLattice[I].toReal(n1), n2)))
-                        case (Real(n1), Int(n2))  => MayFail.success(Real(RealLattice[R].div(n1, IntLattice[I].toReal(n2))))
-                        case (Real(n1), Real(n2)) => MayFail.success(Real(RealLattice[R].div(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].div(n1, n2)))
                         case _                    => MayFail.failure(OperatorNotApplicable("/", args))
                 case Expt =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2))   => MayFail.success(Int(IntLattice[I].expt(n1, n2)))
-                        case (Int(n1), Real(n2))  => MayFail.success(Real(RealLattice[R].expt(IntLattice[I].toReal(n1), n2)))
-                        case (Real(n1), Int(n2))  => MayFail.success(Real(RealLattice[R].expt(n1, IntLattice[I].toReal(n2))))
-                        case (Real(n1), Real(n2)) => MayFail.success(Real(RealLattice[R].expt(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].expt(n1, n2)))
                         case _                    => MayFail.failure(OperatorNotApplicable("expt", args))
                 case Modulo =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2)) => MayFail.success(Int(IntLattice[I].modulo(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].modulo(n1, n2)))
                         case _                  => MayFail.failure(OperatorNotApplicable("modulo", args))
                 case Remainder =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2)) => MayFail.success(Int(IntLattice[I].remainder(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Numb(ModularNumberLattice[I, R, Comp].remainder(n1, n2)))
                         case _                  => MayFail.failure(OperatorNotApplicable("remainder", args))
                 case Lt =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2))   => MayFail.success(Bool(IntLattice[I].lt(n1, n2)))
-                        case (Int(n1), Real(n2))  => MayFail.success(Bool(RealLattice[R].lt(IntLattice[I].toReal(n1), n2)))
-                        case (Real(n1), Int(n2))  => MayFail.success(Bool(RealLattice[R].lt(n1, IntLattice[I].toReal(n2))))
-                        case (Real(n1), Real(n2)) => MayFail.success(Bool(RealLattice[R].lt(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Bool(ModularNumberLattice[I, R, Comp].lt[B](n1, n2)))
                         case _                    => MayFail.failure(OperatorNotApplicable("<", args))
                 case NumEq =>
                     (args(0), args(1)) match
-                        case (Int(n1), Int(n2))   => MayFail.success(Bool(IntLattice[I].eql(n1, n2)))
-                        case (Int(n1), Real(n2))  => MayFail.success(Bool(RealLattice[R].eql(IntLattice[I].toReal(n1), n2)))
-                        case (Real(n1), Int(n2))  => MayFail.success(Bool(RealLattice[R].eql(n1, IntLattice[I].toReal(n2))))
-                        case (Real(n1), Real(n2)) => MayFail.success(Bool(RealLattice[R].eql(n1, n2)))
+                        case (Numb(n1), Numb(n2)) => MayFail.success(Bool(ModularNumberLattice[I, R, Comp].eql[B](n1, n2)))
                         case _                    => MayFail.failure(OperatorNotApplicable("number=", args))
                 case StringAppend =>
                     (args(0), args(1)) match
@@ -716,11 +720,11 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                         case _                  => MayFail.failure(OperatorNotApplicable("string-append", args))
                 case StringRef =>
                     (args(0), args(1)) match
-                        case (Str(s), Int(n)) => MayFail.success(Char(StringLattice[S].ref(s, n)))
+                        //case (Str(s), Int(n)) => MayFail.success(Char(StringLattice[S].ref(s, n)))
                         case _                => MayFail.failure(OperatorNotApplicable("string-ref", args))
                 case StringSet =>
                     (args(0), args(1), args(2)) match
-                        case (Str(s), Int(n), Char(c)) => MayFail.success(Str(StringLattice[S].set(s, n, c)))
+                        //case (Str(s), Int(n), Char(c)) => MayFail.success(Str(StringLattice[S].set(s, n, c)))
                         case _                         => MayFail.failure(OperatorNotApplicable("string-set!", args))
                 case StringLt =>
                     (args(0), args(1)) match
@@ -744,11 +748,11 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                         case _                    => MayFail.failure(OperatorNotApplicable("char-ci<?", args))
                 case Substring =>
                     (args(0), args(1), args(2)) match
-                        case (Str(s), Int(from), Int(to)) => MayFail.success(Str(StringLattice[S].substring(s, from, to)))
+                        //case (Str(s), Int(from), Int(to)) => MayFail.success(Str(StringLattice[S].substring(s, from, to)))
                         case _                            => MayFail.failure(OperatorNotApplicable("substring", args))
                 case MakeString =>
                     (args(0), args(1)) match
-                        case (Int(length), Char(c)) => MayFail.success(Str(IntLattice[I].makeString(length, c)))
+                        //case (Int(length), Char(c)) => MayFail.success(Str(IntLattice[I].makeString(length, c)))
                         case _                      => MayFail.failure(OperatorNotApplicable("make-string", args))
 
         def car(x: Value): MayFail[L, Error] = x match
@@ -759,10 +763,10 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
             case _            => MayFail.failure(TypeError("expecting cons to access cdr", x))
         // This implementation is not suited for use in a concrete machine!
         def vectorRef(vector: Value, index: Value): MayFail[L, Error] = (vector, index) match
-            case (Vec(size, content), Int(index)) =>
-                val comp = IntLattice[I].lt(index, size)
+            case (Vec(size, content), Numb(index)) =>
+                val comp = IntLattice[I].lt(ModularNumberLattice[I, R, Comp].getI(index), size)
                 val t: L = if BoolLattice[B].isTrue(comp) then
-                    val vals = content.view.filterKeys(index2 => BoolLattice[B].isTrue(IntLattice[I].eql(index, index2))).values
+                    val vals = content.view.filterKeys(index2 => BoolLattice[B].isTrue(IntLattice[I].eql(ModularNumberLattice[I, R, Comp].getI(index), index2))).values
                     if vals.isEmpty then schemeLattice.bottom
                     else schemeLattice.join(vals)
                 else schemeLattice.bottom
@@ -779,11 +783,11 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
             newval: L
           ): MayFail[L, Error] =
             (vector, index) match
-                case (Vec(size, content), Int(index)) =>
-                    val comp = IntLattice[I].lt(index, size)
+                case (Vec(size, content), Numb(index)) =>
+                    val comp = IntLattice[I].lt(ModularNumberLattice[I, R, Comp].getI(index), size)
                     val t: L =
                         if BoolLattice[B].isTrue(comp) then
-                            content.find({ case (k, _) => IntLattice[I].subsumes(k, index) }) match
+                            content.find({ case (k, _) => IntLattice[I].subsumes(k, ModularNumberLattice[I, R, Comp].getI(index)) }) match
                                 case Some((index2, _)) =>
                                     // Case 1: there is an `index2` that already subsumes `index`
                                     // Then we just update the value for `index2`
@@ -794,16 +798,16 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                                       )
                                     )
                                 case None =>
-                                    val subsumedKeys = content.keySet.filter(k => IntLattice[I].subsumes(index, k))
+                                    val subsumedKeys = content.keySet.filter(k => IntLattice[I].subsumes(ModularNumberLattice[I, R, Comp].getI(index), k))
                                     if subsumedKeys.nonEmpty then
                                         // Case 2: this index subsumes other indices
                                         // In that case, we join all values and removed the subsumed indices
                                         val joinedValues = schemeLattice.join(content.view.filterKeys(subsumedKeys).toMap.values)
                                         val contentWithoutSubsumedKeys = subsumedKeys.foldLeft(content)((acc, k) => acc - k)
-                                        Element(Vec(size, contentWithoutSubsumedKeys + (index -> schemeLattice.join(joinedValues, newval))))
+                                        Element(Vec(size, contentWithoutSubsumedKeys + (ModularNumberLattice[I, R, Comp].getI(index) -> schemeLattice.join(joinedValues, newval))))
                                     else
                                         // Case 3: there is nothing in `content` that we can update, so we add a new key
-                                        Element(Vec(size, content + (index -> newval)))
+                                        Element(Vec(size, content + (ModularNumberLattice[I, R, Comp].getI(index) -> newval)))
                         else schemeLattice.bottom
                     // We ignore out-of-bounds accesses, mostly because most of them will be spurious.
                     // For example, vector-set! called with Int as first argument would result in
@@ -814,14 +818,14 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
                 case _           => MayFail.failure(TypeError("vector-set!: expecting vector", vector))
 
         def vector(size: Value, init: L): MayFail[Value, Error] = size match
-            case Int(size) =>
+            case Numb(size) =>
                 MayFail.success(if init == IntLattice[I].bottom then {
-                    Vec(size, Map[I, L]())
+                    Vec(ModularNumberLattice[I, R, Comp].getI(size), Map[I, L]())
                 } else {
                     // Field-sensitive vectors:
                     // Vec(size, Map.from[I, L](IntLattice[I].valuesBetween(IntLattice[I].inject(0), size).map(idx => idx -> init).toList))
                     // Field-insensitive vectors:
-                    Vec(size, Map[I, L](IntLattice[I].top -> init))
+                    Vec(ModularNumberLattice[I, R, Comp].getI(size), Map[I, L](IntLattice[I].top -> init))
                 })
             case _ => MayFail.failure(TypeError("expected int size when constructing vector", size))
 
@@ -842,7 +846,7 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
             case _       => MayFail.failure(TypeError("release: expected a lock", lock))
 
         def refs(x: Value): Set[Address] = x match
-            case Bool(_) | Char(_) | Int(_) | Real(_) | Str(_) | Symbol(_) | Prim(_) | Void | Nil | Blames(_) => Set.empty
+            case Bool(_) | Char(_) | Numb(_) | Str(_) | Symbol(_) | Prim(_) | Void | Nil | Blames(_) => Set.empty
             case InputPort(id)                                                                                => schemeLattice.refs(id)
             case OutputPort(id)                                                                               => schemeLattice.refs(id)
             case Thread(_) | Lock(_) | Kont(_) => ??? // TODO: don't know enough about these types to compute refs
@@ -857,8 +861,8 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
         // TODO: this should be the eql method instead?
         def eq(x: Value, y: Value)(comparePtr: MaybeEq[A]): Value = (x, y) match
             case (Bool(b1), Bool(b2))     => Bool(BoolLattice[B].eql(b1, b2))
-            case (Int(n1), Int(n2))       => Bool(IntLattice[I].eql(n1, n2))
-            case (Real(n1), Real(n2))     => Bool(RealLattice[R].eql(n1, n2))
+            //case (Numb(n1), Int(n2))       => Bool(IntLattice[I].eql(n1, n2))
+            //case (Real(n1), Real(n2))     => Bool(RealLattice[R].eql(n1, n2))
             case (Char(c1), Char(c2))     => Bool(CharLattice[C].eql(c1, c2))
             case (Symbol(s1), Symbol(s2)) => Bool(SymbolLattice[Sym].eql(s1, s2))
             case (Nil, Nil)               => True
@@ -982,14 +986,15 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
 
         def bottom: L = Lattice[L].bottom
 
-        def number(x: BigInt): L = HMap.injected(IntT, x)
+        def number(x: BigInt): L = HMap.injected(NumbT, IntN(x))
+        def real(x: Double): L = HMap.injected(NumbT, RealN(x))
 
-        def numTop: L = HMap.inserted(IntT, IntLattice[I].top)
+        def numTop: L = HMap.inserted(NumbT, ModularNumberLattice[I, R, Comp].top)
         def charTop: L = HMap.inserted(CharT, CharLattice[C].top)
-        def realTop: L = HMap.inserted(RealT, RealLattice[R].top)
+        def realTop: L = HMap.inserted(NumbT, ModularNumberLattice[I, R, Comp].top)
         def stringTop: L = HMap.inserted(StrT, StringLattice[S].top)
         def symbolTop: L = HMap.inserted(SymbolT, SymbolLattice[Sym].top)
-        def real(x: Double): L = HMap.injected(RealT, x)
+        //def real(x: Double): L = HMap.injected(RealT, x)
         def string(x: String): L = HMap.injected(StrT, x)
         def char(x: scala.Char): L = HMap.injected(CharT, x)
         def bool(x: Boolean): L = HMap.injected(BoolT, x)
@@ -1041,7 +1046,7 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
     private def emptyEnv[A <: Address] = Environment[A](Iterable.empty)
 
     def convertV[BaseAddr <: Address](
-        baseDomain: ModularSchemeLattice[A, S, B, I, R, C, Sym]
+        baseDomain: ModularSchemeLattice[A, S, B, I, R, C, Sym, Comp]
       )(
         aux: ModularSchemeConvertor[BaseAddr, L]
       )(
@@ -1050,8 +1055,9 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice, I: In
         value match
             case Nil        => baseDomain.Nil
             case Bool(b)    => baseDomain.Bool(b)
-            case Int(i)     => baseDomain.Int(i)
-            case Real(r)    => baseDomain.Real(r)
+            //case Int(i)     => baseDomain.Int(i)
+            case Numb(n)     => baseDomain.Numb(n)
+            //case Real(r)    => baseDomain.Real(r)
             case Char(c)    => baseDomain.Char(c)
             case Str(s)     => baseDomain.Str(s)
             case Symbol(s)  => baseDomain.Symbol(s)

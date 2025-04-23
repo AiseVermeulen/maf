@@ -27,10 +27,11 @@ trait ASchemeConstantPropagationDomain extends SchemeDomain:
     type R = ConstantPropagation.R
     type C = ConstantPropagation.C
     type Sym = ConstantPropagation.Sym
+    type Comp = ConstantPropagation.Comp
     type Value = HMap
 
-    implicit override lazy val lattice: ASchemeModularLattice[Address, S, B, I, R, C, Sym] =
-        new ASchemeModularLattice[Address, S, B, I, R, C, Sym]()
+    implicit override lazy val lattice: ASchemeModularLattice[Address, S, B, I, R, C, Sym, Comp] =
+        new ASchemeModularLattice[Address, S, B, I, R, C, Sym, Comp]()
 
     final lazy val primitives = new SchemeLatticePrimitives()(lattice)
 

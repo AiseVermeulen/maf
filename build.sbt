@@ -38,6 +38,7 @@ lazy val maf = crossProject(JVMPlatform, JSPlatform)
        "dev.optics" %% "monocle-core"  % "3.1.0",
        "dev.optics" %% "monocle-macro" % "3.1.0",
       ),
+    libraryDependencies += "org.typelevel" %% "spire" % "0.18.0",
     /** Imported options from https://tpolecat.github.io/2017/04/25/scalac-flags.html */
     scalacOptions ++= Seq(
       "-deprecation", // Emit warning and location for usages of deprecated APIs.

@@ -10,8 +10,8 @@ import maf.language.AScheme.ASchemeLattice
 import maf.modular.scheme.modactor.MirrorValues.Mirror
 import maf.modular.scheme.modactor.MirrorValues.Envelope
 
-class ASchemeModularLattice[A <: Address, S: StringLattice, B: BoolLattice, I: IntLattice, R: RealLattice, C: CharLattice, Sym: SymbolLattice]
-    extends ModularSchemeLattice[A, S, B, I, R, C, Sym],
+class ASchemeModularLattice[A <: Address, S: StringLattice, B: BoolLattice, I: IntLattice, R: RealLattice, C: CharLattice, Sym: SymbolLattice, Comp: NumberLattice]
+    extends ModularSchemeLattice[A, S, B, I, R, C, Sym, Comp],
       ASchemeLattice[HMap, A]:
 
     object ErrorT extends AbstractSetType[Error, Errors]:

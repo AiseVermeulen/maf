@@ -235,6 +235,8 @@ class SchemeLatticePrimitives[V, A <: Address](implicit override val schemeLatti
         case object `expt` extends SchemePrimOp2("expt", SchemeOp.Expt)
         case object `floor` extends SchemePrimOp1("floor", SchemeOp.Floor)
         case object `inexact->exact` extends SchemePrimOp1("inexact->exact", SchemeOp.InexactToExact)
+        case object `exact?` extends SchemePrimOp1("exact?", SchemeOp.IsExact)
+        case object `inexact?` extends SchemePrimOp1("inexact?", SchemeOp.IsInexact)
         case object `integer->char` extends SchemePrimOp1("integer->char", SchemeOp.IntegerToCharacter)
         case object `integer?` extends SchemePrimOp1("integer?", SchemeOp.IsInteger)
         case object `log` extends SchemePrimOp1("log", SchemeOp.Log)
@@ -425,7 +427,8 @@ class SchemeLatticePrimitives[V, A <: Address](implicit override val schemeLatti
 
         case object `car` extends SchemePrim1("car"):
             def call[M[_]: PrimM](fpos: SchemeExp, x: V): M[V] =
-                dereferencePointer(x)((_, cons) => lat.car(cons))
+                dereferencePointer(x)((_, cons) => lat.
+                  car(cons))
         case object `cdr` extends SchemePrim1("cdr"):
             def call[M[_]: PrimM](fpos: SchemeExp, x: V): M[V] =
                 dereferencePointer(x)((_, cons) => lat.cdr(cons))

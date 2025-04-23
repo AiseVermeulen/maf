@@ -17,10 +17,11 @@ trait SymbolicSchemeConstantPropagationDomain extends SymbolicSchemeDomain:
     type R = ConstantPropagation.R
     type C = ConstantPropagation.C
     type Sym = ConstantPropagation.Sym
+    type Comp = ConstantPropagation.Comp
 
     given Lattice[SymbolicLattice.L] = new SymbolicLattice[B]
 
     type Value = modularLattice.PL
-    final val modularLattice = new Product2ModularSchemeLattice[Address, S, B, I, R, C, Sym, SymbolicLattice.L]
+    final val modularLattice = new Product2ModularSchemeLattice[Address, S, B, I, R, C, Sym, Comp, SymbolicLattice.L]
     implicit lazy val lattice = modularLattice.product2Lattice
     final lazy val primitives = new SchemeLatticePrimitives()(modularLattice.product2Lattice)

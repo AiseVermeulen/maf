@@ -1,9 +1,11 @@
 package maf.lattice
 
-import maf.util._
-import maf.core._
-import maf.lattice.interfaces._
-import NumOps._
+import maf.util.*
+import maf.core.*
+import maf.lattice.interfaces.*
+import NumOps.*
+import spire.math._
+import spire.implicits._
 
 object ConstantPropagation:
 
@@ -68,6 +70,7 @@ object ConstantPropagation:
     type R = L[Double]
     type C = L[Char]
     type Sym = L[String]
+    type Comp = L[Complex[Double]]
 
     object L:
         implicit val boolCP: BoolLattice[B] = new BaseInstance[Boolean]("Bool") with BoolLattice[B] {
@@ -169,6 +172,11 @@ object ConstantPropagation:
                 case Constant(x) => RealLattice[R2].inject(x.toDouble)
                 case Bottom      => RealLattice[R2].bottom
 
+            def toComplex[Comp2: NumberLattice](n: I): Comp2 = n match
+                case Top => NumberLattice[Comp2].top
+                case Constant(x) => NumberLattice[Comp2].inject(Complex[Double](x.toDouble))
+                case Bottom => NumberLattice[Comp2].bottom    
+
             def random(n: I): I = n match
                 case Bottom => Bottom
                 case _      => Top
@@ -240,6 +248,12 @@ object ConstantPropagation:
                 case Top         => IntLattice[I2].top
                 case Constant(x) => IntLattice[I2].inject(x.toInt)
                 case Bottom      => IntLattice[I2].bottom
+
+            def toComplex[Comp2: NumberLattice](n: R): Comp2 = n match
+                case Top         => NumberLattice[Comp2].top
+                case Constant(x) => NumberLattice[Comp2].inject(Complex[Double](x))
+                case Bottom      => NumberLattice[Comp2].bottom
+                
             def ceiling(n: R): R = n match
                 case Constant(x) => Constant(x.ceil)
                 case _           => n
@@ -279,8 +293,8 @@ object ConstantPropagation:
             def atan(n: R): R = n match
                 case Constant(x) => Constant(scala.math.atan(x))
                 case _           => n
-            def sqrt(n: R): R = n match // Todo: use MayFail here or support imaginary numbers.
-                case Constant(x) if 0 <= x => Constant(scala.math.sqrt(x))
+            def sqrt[Comp2: NumberLattice](n: R): R = n match 
+                case Constant(x) if x >= 0 => Constant(scala.math.sqrt(x))
                 case Top                   => Top
                 case _                     => Bottom
             private def binop(
@@ -308,6 +322,82 @@ object ConstantPropagation:
                 case Top         => StringLattice[S2].top
                 case Constant(x) => StringLattice[S2].inject(x.toString)
                 case Bottom      => StringLattice[S2].bottom
+        }
+
+        implicit val complexCP: NumberLattice[Comp] = new BaseInstance[Complex[Double]]("Complex") with NumberLattice[Comp] {
+            def inject(x: Complex[Double]) = Constant(x)
+
+            def log(n: Comp): Comp = n match 
+                case Constant(x) => Constant[Complex[Double]](x.log)
+                case Top => Top
+                case _ => Bottom
+
+            def sin(n: Comp): Comp = n match
+                case Constant(x) => Constant(x.sin)
+                case _ => n
+
+            def asin(n: Comp): Comp = n match // TODO: use MayFail here for when x out of bounds
+                case Constant(x) if -1 <= x && x <= 1 => Constant(x.asin)
+                case Top => Top
+                case _ => Bottom
+
+            def cos(n: Comp): Comp = n match
+                case Constant(x) => Constant(x.cos)
+                case _ => n
+
+            def acos(n: Comp): Comp = n match // TODO: use MayFail here for when x out of bounds
+                case Constant(x) if -1 <= x && x <= 1 => Constant(x.acos) //ordering kan niet, en welke bounds heeft dit nodig?
+                case Top => Top
+                case _ => Bottom
+
+            def tan(n: Comp): Comp = n match // TODO: use MayFail here for when x out of bounds
+                case Constant(x) =>
+                    x.tan match
+                        case Double.NaN => Bottom
+                        case n => Constant(n)
+                case _ => n
+
+            def atan(n: Comp): Comp = n match
+                case Constant(x) => Constant(x.atan)
+                case _ => n
+
+            def sqrt(n: Comp): Comp = n match 
+                case Constant(x) => Constant(x.sqrt)
+                case Top => Top
+                case _ => Bottom
+
+            private def binop(
+                                 op: (Complex[Double], Complex[Double]) => Complex[Double],
+                                 n1: Comp,
+                                 n2: Comp
+                             ) = (n1, n2) match
+                case (Top, Top) => Top
+                case (Top, Constant(_)) => Top
+                case (Constant(_), Top) => Top
+                case (Constant(x), Constant(y)) => Constant(op(x, y))
+                case _ => Bottom
+
+            def plus(n1: Comp, n2: Comp): Comp = binop(_ + _, n1, n2)
+
+            def minus(n1: Comp, n2: Comp): Comp = binop(_ - _, n1, n2)
+
+            def times(n1: Comp, n2: Comp): Comp = binop(_ * _, n1, n2)
+
+            def div(n1: Comp, n2: Comp): Comp = binop(_ / _, n1, n2)
+
+            def expt(n1: Comp, n2: Comp): Comp = binop((x, y) => x.pow(y), n1, n2)
+
+            def lt[B2: BoolLattice](n1: Comp, n2: Comp): B2 = (n1, n2) match
+                case (Top, Top) => BoolLattice[B2].top
+                case (Top, Constant(_)) => BoolLattice[B2].top
+                case (Constant(_), Top) => BoolLattice[B2].top
+                case (Constant(x), Constant(y)) => BoolLattice[B2].inject(x < y)
+                case _ => BoolLattice[B2].bottom
+
+            def toString[S2: StringLattice](n: Comp): S2 = n match
+                case Top => StringLattice[S2].top
+                case Constant(x) => StringLattice[S2].inject(x.toString)
+                case Bottom => StringLattice[S2].bottom
         }
 
         implicit val charCP: CharLattice[C] = new BaseInstance[Char]("Char") with CharLattice[C] {

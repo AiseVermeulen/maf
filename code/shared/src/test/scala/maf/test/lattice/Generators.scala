@@ -1,9 +1,10 @@
 package maf.test.lattice
 
-import org.scalacheck._
+import org.scalacheck.*
 import maf.core.Lattice
-import maf.lattice._
-import maf.lattice.interfaces.BoolLattice
+import maf.language.scheme.lattices.{E, NumericTowerLattice, exact, exactLatticeBottom, exactLatticeTop, inexact}
+import maf.lattice.{Concrete, *}
+import maf.lattice.interfaces.{BoolLattice, IntLattice, RealLattice}
 
 trait LatticeGenerator[L]:
     def any: Gen[L]
@@ -57,7 +58,7 @@ class ConcreteGenerator[T](g: Gen[T])(implicit lat: Lattice[Concrete.L[T]]) exte
     val isetgen = SetGen[T](g)
     val topgen: Gen[Concrete.L[T]] = lat.top
 
-    def any = Gen.oneOf(topgen, isetgen.gen.map(x => Concrete.Values(x)))
+    def any: Gen[Concrete.L[T]] = Gen.oneOf(topgen, isetgen.gen.map(x => Concrete.Values(x)))
     def le(l: Concrete.L[T]) = l match
         case Concrete.Top             => any
         case Concrete.Values(content) => isetgen.genSubset(content.toSet[T]).map(x => Concrete.Values(x))
@@ -74,6 +75,25 @@ object ConcreteIntGenerator extends ConcreteGenerator[BigInt](Generators.int)
 object ConcreteRealGenerator extends ConcreteGenerator[Double](Generators.double)
 object ConcreteCharGenerator extends ConcreteGenerator[Char](Generators.char)
 object ConcreteSymbolGenerator extends ConcreteGenerator[String](Generators.sym)(Concrete.L.symConcrete)
+
+class NumericTowerGenerator[I: IntLattice, R: RealLattice](IGen: LatticeGenerator[I], RGen: LatticeGenerator[R]) extends LatticeGenerator[(I, R)]:
+    override def any: Gen[(I, R)] = Gen.zip(IGen.any, RGen.any)
+    override def le(l: (I, R)): Gen[(I, R)] = Gen.zip(IGen.le(l._1), RGen.le(l._2))
+    
+object ConcreteNumericTowerGenerator extends NumericTowerGenerator[Concrete.I, Concrete.R](ConcreteIntGenerator, ConcreteRealGenerator)    
+    
+object ExactLatticeGenerator extends LatticeGenerator[E]: 
+    override def any: Gen[E] = Gen.oneOf(exact, inexact, exactLatticeTop, exactLatticeBottom)   
+    override def le(l: E): Gen[E] =
+        if l == exactLatticeTop then
+            Gen.oneOf(exact, inexact, exactLatticeBottom)
+        else if l == exact then
+            Gen.oneOf(exact, exactLatticeBottom)
+        else if l == inexact then
+            Gen.oneOf(inexact, exactLatticeBottom)
+        else 
+            Gen.const(exactLatticeBottom)    
+            
 
 object TypeGenerator extends LatticeGenerator[Type.T]:
 
@@ -100,3 +120,5 @@ object ConstantPropagationIntGenerator extends ConstantPropagationGenerator[BigI
 object ConstantPropagationRealGenerator extends ConstantPropagationGenerator[Double](Generators.double)
 object ConstantPropagationCharGenerator extends ConstantPropagationGenerator[Char](Generators.char)
 object ConstantPropagationSymbolGenerator extends ConstantPropagationGenerator[String](Generators.sym)(ConstantPropagation.L.symCP)
+
+object ConstantPropagationNumericTowerGenerator extends NumericTowerGenerator[ConstantPropagation.I, ConstantPropagation.R](ConstantPropagationIntGenerator, ConstantPropagationRealGenerator)

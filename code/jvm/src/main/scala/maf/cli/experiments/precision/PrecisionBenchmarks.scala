@@ -12,12 +12,12 @@ import maf.util._
 import maf.util.benchmarks.Timeout
 import maf.language.scheme.interpreter.EmptyIO
 
-abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice]:
+abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Complex: NumberLattice]:
 
     type Benchmark = String
     type Analysis = AnalysisEntry[SchemeExp] with AnalysisResults[SchemeExp] with ModularSchemeDomain {
         val modularLatticeWrapper: ModularSchemeLatticeWrapper {
-            val modularLattice: ModularSchemeLattice[Address, Str, Bln, Num, Rea, Chr, Smb]
+            val modularLattice: ModularSchemeLattice[Address, Str, Bln, Num, Rea, Chr, Smb, Complex]
         }
     }
 
@@ -33,7 +33,7 @@ abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolL
         case maf.modular.scheme.PtrAddr(exp, _) => PtrAddr(exp)
         case maf.modular.scheme.PrmAddr(nam)    => PrmAddr(nam)
 
-    val baseDomain = new ModularSchemeLattice[BaseAddr, Str, Bln, Num, Rea, Chr, Smb]
+    val baseDomain = new ModularSchemeLattice[BaseAddr, Str, Bln, Num, Rea, Chr, Smb, Complex]
     val baseLattice = baseDomain.schemeLattice
     type BaseValue = baseDomain.L
 
@@ -41,8 +41,9 @@ abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolL
     protected def convertV(analysis: Analysis)(value: analysis.modularLatticeWrapper.modularLattice.Value): baseDomain.Value = value match
         case analysis.modularLatticeWrapper.modularLattice.Nil          => baseDomain.Nil
         case analysis.modularLatticeWrapper.modularLattice.Bool(b)      => baseDomain.Bool(b)
-        case analysis.modularLatticeWrapper.modularLattice.Int(i)       => baseDomain.Int(i)
-        case analysis.modularLatticeWrapper.modularLattice.Real(r)      => baseDomain.Real(r)
+        //case analysis.modularLatticeWrapper.modularLattice.Int(i)       => baseDomain.Int(i)
+        case analysis.modularLatticeWrapper.modularLattice.Numb(r)      => baseDomain.Numb(r)
+        //case analysis.modularLatticeWrapper.modularLattice.Real(r)      => baseDomain.Real(r)
         case analysis.modularLatticeWrapper.modularLattice.Char(c)      => baseDomain.Char(c)
         case analysis.modularLatticeWrapper.modularLattice.Str(s)       => baseDomain.Str(s)
         case analysis.modularLatticeWrapper.modularLattice.Symbol(s)    => baseDomain.Symbol(s)
@@ -80,7 +81,7 @@ abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolL
         case ConcreteValues.Value.Pointer(a)   => baseLattice.pointer(convertConcreteAddr(a))
         case ConcreteValues.Value.Vector(siz, els, _) =>
             def convertNumber(n: BigInt): Num = baseLattice.number(n) match
-                case baseDomain.Elements(vs) => vs.head.asInstanceOf[baseDomain.Int].i
+                case baseDomain.Elements(vs) => vs.head.asInstanceOf[baseDomain.Numb].n._2._1
 
             val cSiz = convertNumber(siz)
             val cEls = els.foldLeft(Map[Num, BaseValue]()) { case (acc, (idx, vlu)) =>

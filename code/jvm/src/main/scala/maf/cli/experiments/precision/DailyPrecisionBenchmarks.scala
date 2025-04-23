@@ -16,7 +16,8 @@ object DailyPrecisionBenchmarks
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
-      ConstantPropagation.Sym
+      ConstantPropagation.Sym,
+      ConstantPropagation.Comp
     ]:
     // analyses to compare
     def baseAnalysis(prg: SchemeExp): Analysis =

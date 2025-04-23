@@ -1,6 +1,7 @@
 package maf.util
 
-import maf.core._
+import maf.core.*
+import spire.math.Complex
 
 trait Show[V] extends Serializable:
     def show(v: V): String
@@ -24,6 +25,9 @@ object Show:
     }
     implicit val charShow: Show[Char] = new Show[Char] {
         def show(c: Char): String = s"#\\$c"
+    }
+    implicit val compShow: Show[Complex[Double]] = new Show[Complex[Double]] {
+        def show(c: Complex[Double]): String = s"$c"
     }
     given listShow[X: Show]: Show[List[X]] with
         def show(v: List[X]): String =

@@ -1,10 +1,11 @@
 package maf.lattice
 
-import maf.core._
-import maf.lattice.interfaces._
+import maf.core.*
+import maf.lattice.interfaces.*
 import maf.util.Show
-import maf.util.datastructures.SmartUnion._
-import NumOps._
+import maf.util.datastructures.SmartUnion.*
+import NumOps.*
+import spire.math.Complex
 
 class ConcreteLattice:
 
@@ -55,6 +56,7 @@ class ConcreteLattice:
     type I = L[BigInt]
     type R = L[Double]
     type C = L[Char]
+    type Comp = L[Complex[Double]]
     /* TODO[easy]: the bool lattice implementation could be specialized (see the old "ConcreteBoolEfficient" implementation). Whether this results in a speed improvement should be evaluated */
 
     object L:
@@ -221,7 +223,7 @@ class ConcreteLattice:
             def tan(n: R): R =
                 n.map(n => scala.math.sin(n) / scala.math.cos(n)) /* scala.math.tan isn't precise enough */
             def atan(n: R): R = n.map(n => scala.math.atan(n))
-            def sqrt(n: R): R = n.map(n => scala.math.sqrt(n))
+            def sqrt[Comp2: NumberLattice](n: R): R|Comp2 = n.map(n => scala.math.sqrt(n))//if n >= 0 then scala.math.sqrt(n)else NumberLattice[Comp2].inject(scala.math.sqrt(n)))
             def plus(n1: R, n2: R): R = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 + n2)))
             def minus(n1: R, n2: R): R = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 - n2)))
             def times(n1: R, n2: R): R = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 * n2)))
