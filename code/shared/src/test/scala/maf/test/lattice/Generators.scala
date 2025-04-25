@@ -4,7 +4,9 @@ import org.scalacheck.*
 import maf.core.Lattice
 import maf.language.scheme.lattices.{E, NumericTowerLattice, exact, exactLatticeBottom, exactLatticeTop, inexact}
 import maf.lattice.{Concrete, *}
-import maf.lattice.interfaces.{BoolLattice, IntLattice, RealLattice}
+import maf.lattice.interfaces.{BoolLattice, IntLattice, NumberLattice, RealLattice}
+import spire.math.*
+import spire.implicits.*
 
 trait LatticeGenerator[L]:
     def any: Gen[L]
@@ -18,6 +20,7 @@ object Generators:
     val double: Gen[Double] = Gen.choose(-1000.0, 1000.0)
     val char: Gen[Char] = Gen.choose(0.toChar, 255.toChar)
     val sym: Gen[String] = Gen.resize(10, Gen.oneOf(Gen.identifier, Gen.alphaStr))
+    val complex: Gen[Complex[Double]] = Gen.resultOf[Double, Double, Complex[Double]]((x, y) => Complex[Double](x, y))
 
 class BooleanGenerator[B: BoolLattice] extends LatticeGenerator[B]:
 
@@ -71,16 +74,17 @@ class ConcreteGenerator[T](g: Gen[T])(implicit lat: Lattice[Concrete.L[T]]) exte
 object ConcreteStringGenerator extends ConcreteGenerator[String](Generators.str)(Concrete.L.stringConcrete)
 
 object ConcreteIntGenerator extends ConcreteGenerator[BigInt](Generators.int)
-
+object ConcreteComplexGenerator extends ConcreteGenerator[Complex[Double]](Generators.complex)
 object ConcreteRealGenerator extends ConcreteGenerator[Double](Generators.double)
 object ConcreteCharGenerator extends ConcreteGenerator[Char](Generators.char)
+
 object ConcreteSymbolGenerator extends ConcreteGenerator[String](Generators.sym)(Concrete.L.symConcrete)
 
-class NumericTowerGenerator[I: IntLattice, R: RealLattice](IGen: LatticeGenerator[I], RGen: LatticeGenerator[R]) extends LatticeGenerator[(I, R)]:
-    override def any: Gen[(I, R)] = Gen.zip(IGen.any, RGen.any)
-    override def le(l: (I, R)): Gen[(I, R)] = Gen.zip(IGen.le(l._1), RGen.le(l._2))
+class NumericTowerGenerator[I: IntLattice, R: RealLattice, Comp: NumberLattice](IGen: LatticeGenerator[I], RGen: LatticeGenerator[R], CGen: LatticeGenerator[Comp]) extends LatticeGenerator[(I, R, Comp)]:
+    override def any: Gen[(I, R, Comp)] = Gen.zip(IGen.any, RGen.any, CGen.any)
+    override def le(l: (I, R, Comp)): Gen[(I, R, Comp)] = Gen.zip(IGen.le(l._1), RGen.le(l._2), CGen.le(l._3))
     
-object ConcreteNumericTowerGenerator extends NumericTowerGenerator[Concrete.I, Concrete.R](ConcreteIntGenerator, ConcreteRealGenerator)    
+object ConcreteNumericTowerGenerator extends NumericTowerGenerator[Concrete.I, Concrete.R, Concrete.Comp](ConcreteIntGenerator, ConcreteRealGenerator, ConcreteComplexGenerator)
     
 object ExactLatticeGenerator extends LatticeGenerator[E]: 
     override def any: Gen[E] = Gen.oneOf(exact, inexact, exactLatticeTop, exactLatticeBottom)   
@@ -117,8 +121,10 @@ object ConstantPropagationStringGenerator extends ConstantPropagationGenerator[S
 
 object ConstantPropagationIntGenerator extends ConstantPropagationGenerator[BigInt](Generators.int)
 
+object ConstantPropagationComplexGenerator extends ConstantPropagationGenerator[Complex[Double]](Generators.complex)
+
 object ConstantPropagationRealGenerator extends ConstantPropagationGenerator[Double](Generators.double)
 object ConstantPropagationCharGenerator extends ConstantPropagationGenerator[Char](Generators.char)
 object ConstantPropagationSymbolGenerator extends ConstantPropagationGenerator[String](Generators.sym)(ConstantPropagation.L.symCP)
 
-object ConstantPropagationNumericTowerGenerator extends NumericTowerGenerator[ConstantPropagation.I, ConstantPropagation.R](ConstantPropagationIntGenerator, ConstantPropagationRealGenerator)
+object ConstantPropagationNumericTowerGenerator extends NumericTowerGenerator[ConstantPropagation.I, ConstantPropagation.R, ConstantPropagation.Comp](ConstantPropagationIntGenerator, ConstantPropagationRealGenerator, ConstantPropagationComplexGenerator)

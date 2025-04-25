@@ -24,13 +24,14 @@ trait SchemeLatticeGenerator[L] extends LatticeGenerator[L]:
     def anyVec: Gen[L]
     def anyInt: Gen[L]
 
-abstract class ModularSchemeLatticeGenerator[S: StringLattice, B: BoolLattice, I: IntLattice, R: RealLattice, C: CharLattice, Sym: SymbolLattice](
+abstract class ModularSchemeLatticeGenerator[S: StringLattice, B: BoolLattice, I: IntLattice, R: RealLattice, C: CharLattice, Sym: SymbolLattice, Comp: NumberLattice](
     strGen: LatticeGenerator[S],
     blnGen: LatticeGenerator[B],
     intGen: LatticeGenerator[I],
     reaGen: LatticeGenerator[R],
     chrGen: LatticeGenerator[C],
-    symGen: LatticeGenerator[Sym]):
+    symGen: LatticeGenerator[Sym],
+    compGen: LatticeGenerator[Comp]):
 
     val emptyEnv = Environment[SimpleAddr](Iterable.empty)
 
@@ -58,7 +59,7 @@ abstract class ModularSchemeLatticeGenerator[S: StringLattice, B: BoolLattice, I
     // we'll use the "real" primitives
     def primitives = new SchemeLatticePrimitives[modularLattice.L, SimpleAddr]
     // the modular lattice that is used
-    final lazy val modularLattice: ModularSchemeLattice[SimpleAddr, S, B, I, R, C, Sym] = new ModularSchemeLattice
+    final lazy val modularLattice: ModularSchemeLattice[SimpleAddr, S, B, I, R, C, Sym, Comp] = new ModularSchemeLattice
 
     type L = modularLattice.L
     type V = modularLattice.Value
@@ -92,7 +93,8 @@ abstract class ModularSchemeLatticeGenerator[S: StringLattice, B: BoolLattice, I
             prm <- pickAtMost(1, SchemeVLatticeGenerator.anyPrmV)
             ptr <- pickAtMost(1, SchemeVLatticeGenerator.anyPtrV)
             clo <- pickAtMost(1, SchemeVLatticeGenerator.anyCloV)
-            lst = nil ++ str ++ bln ++ int ++ rea ++ chr ++ sym ++ prm ++ ptr ++ clo
+            com <- pickAtMost(1, SchemeVLatticeGenerator.anyCompV)
+            lst = nil ++ str ++ bln ++ int ++ rea ++ chr ++ sym ++ prm ++ ptr ++ clo ++ com
         yield modularLattice.Elements(lst.sortBy(_.ord))
         /* Generate any cons-cell */
         def anyPai: Gen[L] = SchemeVLatticeGenerator.anyPaiV.map(modularLattice.Element(_))
@@ -125,6 +127,7 @@ abstract class ModularSchemeLatticeGenerator[S: StringLattice, B: BoolLattice, I
         val anyStrV: Gen[V] = strGen.any.retryUntil(_ != StringLattice[S].bottom).map(modularLattice.Str(_))
         val anyBlnV: Gen[V] = blnGen.any.retryUntil(_ != BoolLattice[B].bottom).map(modularLattice.Bool(_))
         val anyReaV: Gen[V] = reaGen.any.retryUntil(_ != RealLattice[R].bottom).map(modularLattice.Real(_))
+        val anyCompV: Gen[V] = compGen.any.retryUntil(_ != NumberLattice[Comp].bottom).map(modularLattice.Compl(_))
         val anyChrV: Gen[V] = chrGen.any.retryUntil(_ != CharLattice[C].bottom).map(modularLattice.Char(_))
         val anySymV: Gen[V] = symGen.any.retryUntil(_ != SymbolLattice[Sym].bottom).map(modularLattice.Symbol(_))
         val anyPrmV: Gen[V] =
@@ -146,6 +149,7 @@ abstract class ModularSchemeLatticeGenerator[S: StringLattice, B: BoolLattice, I
             case modularLattice.Bool(b)     => blnGen.le(b).retryUntil(_ != BoolLattice[B].bottom).map(modularLattice.Bool(_))
             case modularLattice.Int(i)      => intGen.le(i).retryUntil(_ != IntLattice[I].bottom).map(modularLattice.Int(_))
             case modularLattice.Real(r)     => reaGen.le(r).retryUntil(_ != RealLattice[R].bottom).map(modularLattice.Real(_))
+            case modularLattice.Compl(c)    => compGen.le(c).retryUntil(_ != NumberLattice[Comp].bottom).map(modularLattice.Compl(_))
             case modularLattice.Char(c)     => chrGen.le(c).retryUntil(_ != CharLattice[C].bottom).map(modularLattice.Char(_))
             case modularLattice.Symbol(s)   => symGen.le(s).retryUntil(_ != SymbolLattice[Sym].bottom).map(modularLattice.Symbol(_))
             case modularLattice.Prim(ps)    => Gen.someOf(ps).retryUntil(_.nonEmpty).map(_.toSet).map(modularLattice.Prim(_))
@@ -184,7 +188,8 @@ object ConstantModularSchemeLattice
                                           ConstantPropagationIntGenerator,
                                           ConstantPropagationRealGenerator,
                                           ConstantPropagationCharGenerator,
-                                          ConstantPropagationSymbolGenerator
+                                          ConstantPropagationSymbolGenerator, 
+                                          ConstantPropagationComplexGenerator
     )
 object ConcreteModularSchemeLattice
     extends ModularSchemeLatticeGenerator(ConcreteStringGenerator,
@@ -192,7 +197,8 @@ object ConcreteModularSchemeLattice
                                           ConcreteIntGenerator,
                                           ConcreteRealGenerator,
                                           ConcreteCharGenerator,
-                                          ConcreteSymbolGenerator
+                                          ConcreteSymbolGenerator,
+                                          ConcreteComplexGenerator
     )
 object TypeModularSchemeLattice
-    extends ModularSchemeLatticeGenerator(TypeGenerator, TypeGenerator, TypeGenerator, TypeGenerator, TypeGenerator, TypeGenerator)
+    extends ModularSchemeLatticeGenerator(TypeGenerator, TypeGenerator, TypeGenerator, TypeGenerator, TypeGenerator, TypeGenerator, TypeGenerator)

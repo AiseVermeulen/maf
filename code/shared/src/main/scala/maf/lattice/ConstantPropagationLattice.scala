@@ -293,7 +293,7 @@ object ConstantPropagation:
             def atan(n: R): R = n match
                 case Constant(x) => Constant(scala.math.atan(x))
                 case _           => n
-            def sqrt[Comp2: NumberLattice](n: R): R = n match 
+            def sqrt(n: R): R = n match 
                 case Constant(x) if x >= 0 => Constant(scala.math.sqrt(x))
                 case Top                   => Top
                 case _                     => Bottom
@@ -326,7 +326,8 @@ object ConstantPropagation:
 
         implicit val complexCP: NumberLattice[Comp] = new BaseInstance[Complex[Double]]("Complex") with NumberLattice[Comp] {
             def inject(x: Complex[Double]) = Constant(x)
-
+            def inject(x: BigInt) = inject(Complex[Double](x))
+            def inject(x: Double) = inject(Complex[Double](x))
             def log(n: Comp): Comp = n match 
                 case Constant(x) => Constant[Complex[Double]](x.log)
                 case Top => Top
@@ -337,7 +338,7 @@ object ConstantPropagation:
                 case _ => n
 
             def asin(n: Comp): Comp = n match // TODO: use MayFail here for when x out of bounds
-                case Constant(x) if -1 <= x && x <= 1 => Constant(x.asin)
+                case Constant(x) => Constant(x.asin) //if -1 <= x && x <= 1 => Constant(x.asin) 
                 case Top => Top
                 case _ => Bottom
 
@@ -346,7 +347,7 @@ object ConstantPropagation:
                 case _ => n
 
             def acos(n: Comp): Comp = n match // TODO: use MayFail here for when x out of bounds
-                case Constant(x) if -1 <= x && x <= 1 => Constant(x.acos) //ordering kan niet, en welke bounds heeft dit nodig?
+                case Constant(x) => Constant(x.acos)// if -1 <= x && x <= 1 => Constant(x.acos) //ordering kan niet, en welke bounds heeft dit nodig?
                 case Top => Top
                 case _ => Bottom
 
@@ -386,13 +387,6 @@ object ConstantPropagation:
             def div(n1: Comp, n2: Comp): Comp = binop(_ / _, n1, n2)
 
             def expt(n1: Comp, n2: Comp): Comp = binop((x, y) => x.pow(y), n1, n2)
-
-            def lt[B2: BoolLattice](n1: Comp, n2: Comp): B2 = (n1, n2) match
-                case (Top, Top) => BoolLattice[B2].top
-                case (Top, Constant(_)) => BoolLattice[B2].top
-                case (Constant(_), Top) => BoolLattice[B2].top
-                case (Constant(x), Constant(y)) => BoolLattice[B2].inject(x < y)
-                case _ => BoolLattice[B2].bottom
 
             def toString[S2: StringLattice](n: Comp): S2 = n match
                 case Top => StringLattice[S2].top

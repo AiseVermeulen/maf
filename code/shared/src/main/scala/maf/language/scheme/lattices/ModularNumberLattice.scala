@@ -1,6 +1,7 @@
 package maf.language.scheme.lattices
 
 import maf.lattice.interfaces.{BoolLattice, IntLattice, NumberLattice, RealLattice}
+import spire.math.Complex
 
 class ModularNumberLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] extends NumberLattice[(E, (I, R, Comp))]{
     
@@ -27,6 +28,7 @@ class ModularNumberLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] e
 
     override def inject(n: BigInt): N = (exact, NumericTowerLattice[I, R, Comp].inject(n))
     override def inject(n: Double): N = (exact, NumericTowerLattice[I, R, Comp].inject(n))
+    override def inject(n: Complex[Double]): N = (exact, NumericTowerLattice[I, R, Comp].inject(n))
 
     override def subsumes(x: N, y: => N): Boolean =
         EL.subsumes(x._1, y._1) && NumericTowerLattice[I, R, Comp].subsumes(x._2, y._2)
@@ -37,10 +39,10 @@ class ModularNumberLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] e
     def getI(n: N) : I = n._2._1
     def getR(n: N) : R = n._2._2
 
-    override def quotient(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def quotient(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.minus(n1._1, n2._1), NTL.minus(n1._2, n2._2))
         
-    override def toReal(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def toReal(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (n._1, NTL.toReal(n._2))
 
     override def plus(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
@@ -55,13 +57,13 @@ class ModularNumberLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] e
     override def sqrt(n: N): N =
         (EL.sqrt(n._1), NumericTowerLattice[I, R, Comp].sqrt(n._2))
 
-    override def lt[B: BoolLattice](n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): B =
+    def lt[B: BoolLattice](n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): B =
         NumericTowerLattice[I, R, Comp].lt(n1._2, n2._2)
 
-    override def exactToInexact(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def exactToInexact(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.exactToInexact(n._1), n._2)
 
-    override def inexactToExact(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def inexactToExact(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.inexactToExact(n._1), n._2)    
 
     override def acos(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
@@ -76,10 +78,10 @@ class ModularNumberLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] e
     override def cos(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.cos(n._1), NumericTowerLattice[I, R, Comp].cos(n._2))
 
-    override def floor(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def floor(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.floor(n._1), NumericTowerLattice[I, R, Comp].floor(n._2))
 
-    override def ceiling(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def ceiling(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.ceiling(n._1), NumericTowerLattice[I, R, Comp].ceiling(n._2))
 
     override def sin(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
@@ -88,7 +90,7 @@ class ModularNumberLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] e
     override def tan(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.tan(n._1), NumericTowerLattice[I, R, Comp].tan(n._2))
 
-    override def round(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def round(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.round(n._1), NumericTowerLattice[I, R, Comp].round(n._2))
 
     override def div(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
@@ -100,12 +102,12 @@ class ModularNumberLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] e
     override def expt(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.expt(n1._1, n2._1), NTL.expt(n1._2, n2._2))
 
-    override def modulo(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def modulo(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.modulo(n1._1, n2._1), NTL.modulo(n1._2, n2._2))
 
-    override def remainder(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def remainder(n1: (E, (I, R, Comp)), n2: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.remainder(n1._1, n2._1), NTL.remainder(n1._2, n2._2))
 
-    override def toInt(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
+    def toInt(n: (E, (I, R, Comp))): (E, (I, R, Comp)) =
         (EL.toInt(n._1), NumericTowerLattice[I, R, Comp].toInt(n._2))    
 }

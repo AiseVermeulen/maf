@@ -114,13 +114,15 @@ class NumericTowerLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] ex
         for (e1 <- wrap(n1).productIterator) {
             for (e2 <- wrap(n2).productIterator) {
                 (e1, e2) match
+                    case (i: NComp, _) => BoolLattice[B].bottom
+                    case (_, i: NComp) => BoolLattice[B].bottom
                     case (i1 : NumType, i2: NumType) => res = BoolLattice[B].join(res, fCompare(castToReal(i1), castToReal(i2)))
             }
         }
         res
 
-    override def lt[B: BoolLattice](n1: (I, R, Comp), n2: (I, R, Comp)): B = compare[B](n1, n2, RealLattice[R].lt)
-    override def eql[B: BoolLattice](n1: (I, R, Comp), n2: (I, R, Comp)): B = compare[B](n1, n2, RealLattice[R].eql)
+    def lt[B: BoolLattice](n1: (I, R, Comp), n2: (I, R, Comp)): B = compare[B](n1, n2, RealLattice[R].lt)
+    override def eql[B: BoolLattice](n1: (I, R, Comp), n2: (I, R, Comp)): B = compare[B](n1, n2, RealLattice[R].eql) //
 
     override def div(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) =
         foldMap(
@@ -143,9 +145,9 @@ class NumericTowerLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] ex
         },
             n)
     
-    override def ceiling(n: (I, R, Comp)): (I, R, Comp) = generalRound(n, RealLattice[R].ceiling)
-    override def floor(n: (I, R, Comp)): (I, R, Comp) = generalRound(n, RealLattice[R].floor)
-    override def round(n: (I, R, Comp)): (I, R, Comp) = generalRound(n, RealLattice[R].round)
+    def ceiling(n: (I, R, Comp)): (I, R, Comp) = generalRound(n, RealLattice[R].ceiling)
+    def floor(n: (I, R, Comp)): (I, R, Comp) = generalRound(n, RealLattice[R].floor)
+    def round(n: (I, R, Comp)): (I, R, Comp) = generalRound(n, RealLattice[R].round)
 
     //////////////////////////////////////////////////////////////////
     private def ToR(n: (I, R, Comp), fReal: R => R, fComp: Comp => Comp): (I, R, Comp) =
@@ -166,21 +168,24 @@ class NumericTowerLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] ex
     private def MAndR(n1: (I, R, Comp), n2: (I, R, Comp), f: (I, I) => I) : (I, R, Comp) =
         (f(n1._1, n2._1), realBottom, NumberLattice[Comp].bottom)
 
-    override def remainder(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = MAndR(n1, n2, IntLattice[I].remainder)
-    override def modulo(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = MAndR(n1, n2, IntLattice[I].modulo)
-    override def quotient(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = MAndR(n1, n2, IntLattice[I].quotient)
+    def remainder(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = MAndR(n1, n2, IntLattice[I].remainder)
+    def modulo(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = MAndR(n1, n2, IntLattice[I].modulo)
+    def quotient(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = MAndR(n1, n2, IntLattice[I].quotient)
 
-    override def toInt(n: (I, R, Comp)): (I, R, Comp) =
+    def toInt(n: (I, R, Comp)): (I, R, Comp) =
         (IntLattice[I].join(
                 n._1,
                 RealLattice[R].toInt[I](n._2)), 
             realBottom, 
             NumberLattice[Comp].bottom)
 
-    override def toReal(n: (I, R, Comp)): (I, R, Comp) = (intBottom, RealLattice[R].join(castToReal(n._1), n._2), NumberLattice[Comp].bottom)
+    def toReal(n: (I, R, Comp)): (I, R, Comp) = (intBottom, RealLattice[R].join(castToReal(n._1), n._2), NumberLattice[Comp].bottom)
 
-    override def exactToInexact(n: (I, R, Comp)): (I, R, Comp) = n
-    override def inexactToExact(n: (I, R, Comp)): (I, R, Comp) = n
-
-    override def log(n: (I, R, Comp)): (I, R, Comp) = foldMap(elem => NReal(RealLattice[R].log(castToReal(elem))), n)
+    override def log(n: (I, R, Comp)): (I, R, Comp) = foldMap(
+        elem =>
+            elem match
+                case NInt(i) => NReal(RealLattice[R].log(castToReal(i)))
+                case NReal(r) => NReal(RealLattice[R].log(r))
+                case NComp(c) => NComp(NumberLattice[Comp].log(c)),
+        n)
 }

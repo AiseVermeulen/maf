@@ -5,7 +5,8 @@ import maf.lattice.interfaces.*
 import maf.util.Show
 import maf.util.datastructures.SmartUnion.*
 import NumOps.*
-import spire.math.Complex
+import spire.math._
+import spire.implicits._
 
 class ConcreteLattice:
 
@@ -162,6 +163,10 @@ class ConcreteLattice:
                 case Top             => RealLattice[R2].top
                 case Values(content) => content.foldMap((n: BigInt) => RealLattice[R2].inject(bigIntToDouble(n)))
 
+            def toComplex[Comp2: NumberLattice](n: I): Comp2 = n match
+                case Top => NumberLattice[Comp2].top
+                case Values(content) => content.foldMap((n: BigInt) => NumberLattice[Comp2].inject(Complex[Double](n)))
+
             def random(n: I): I = if n == bottom then bottom else Top
 
             def plus(n1: I, n2: I): I = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 + n2)))
@@ -211,6 +216,9 @@ class ConcreteLattice:
         implicit val realConcrete: RealLattice[R] = new BaseInstance[Double]("Real") with RealLattice[R] {
             def inject(x: Double): R = makeValues(Set(x))
             def toInt[I2: IntLattice](n: R): I2 = n.foldMap(n => IntLattice[I2].inject(n.toInt))
+            def toComplex[Comp2: NumberLattice](n: R): Comp2 = n match
+                case Top => NumberLattice[Comp2].top
+                case Values(content) => content.foldMap((n: Double) => NumberLattice[Comp2].inject(Complex[Double](n)))
             def ceiling(n: R): R = n.map(_.ceil)
             def floor(n: R): R = n.map(_.floor)
             def round(n: R): R = n.map(n => MathOps.round(n))
@@ -223,7 +231,7 @@ class ConcreteLattice:
             def tan(n: R): R =
                 n.map(n => scala.math.sin(n) / scala.math.cos(n)) /* scala.math.tan isn't precise enough */
             def atan(n: R): R = n.map(n => scala.math.atan(n))
-            def sqrt[Comp2: NumberLattice](n: R): R|Comp2 = n.map(n => scala.math.sqrt(n))//if n >= 0 then scala.math.sqrt(n)else NumberLattice[Comp2].inject(scala.math.sqrt(n)))
+            def sqrt(n: R): R = n.map(n => scala.math.sqrt(n))//if n >= 0 then scala.math.sqrt(n)else NumberLattice[Comp2].inject(scala.math.sqrt(n)))
             def plus(n1: R, n2: R): R = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 + n2)))
             def minus(n1: R, n2: R): R = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 - n2)))
             def times(n1: R, n2: R): R = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 * n2)))
@@ -236,6 +244,26 @@ class ConcreteLattice:
             def toString[S2: StringLattice](n: R): S2 =
                 n.foldMap(n => StringLattice[S2].inject(n.toString))
         }
+
+        implicit val compConcrete: NumberLattice[Comp] = new BaseInstance[Complex[Double]]("Complex") with NumberLattice[Comp] {
+            def inject(x: Complex[Double]): Comp = makeValues(Set(x))
+            def inject(x: BigInt): Comp = inject(Complex[Double](x))
+            def inject(x: Double): Comp = inject(Complex[Double](x))
+            def log(n: Comp): Comp = n.map(n => n.log)
+            def sin(n: Comp): Comp = n.map(n => n.sin)
+            def asin(n: Comp): Comp = n.map(n => n.asin)
+            def cos(n: Comp): Comp = n.map(n => n.cos)
+            def acos(n: Comp): Comp = n.map(n => n.acos)
+            def tan(n: Comp): Comp = n.map(n => n.tan)
+            def atan(n: Comp): Comp = n.map(n => n.atan)
+            def sqrt(n: Comp): Comp = n.map(n => n.sqrt)
+            def plus(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 + n2)))
+            def minus(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 - n2)))
+            def times(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 * n2)))
+            def div(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 / n2)))
+            def expt(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1.pow(n2))))
+        }
+
         implicit val charConcrete: CharLattice[C] = new BaseInstance[Char]("Char") with CharLattice[C] {
             def inject(x: Char): C = makeValues(Set(x))
             def downCase(c: C): C = c.map(_.toLower)

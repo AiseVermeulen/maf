@@ -2,6 +2,7 @@ package maf.lattice
 
 import maf.core.*
 import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, NotANumberString, NumberLattice, RealLattice, StringLattice, SymbolLattice}
+import spire.math.Complex
 
 object Type:
     sealed trait T:
@@ -86,8 +87,8 @@ object Type:
         }
         implicit val typeIsInteger: IntLattice[I] = new BaseInstance("Int") with IntLattice[I] {
             def inject(x: BigInt): T = Top
-
             def toReal[R2: RealLattice](n: T): R2 = n.to[R2]
+            def toComplex[Comp2: NumberLattice](n: T): Comp2 = n.to[Comp2]
             def random(n: T): T = n
             def plus(n1: T, n2: T): T = meet(n1, n2)
             def minus(n1: T, n2: T): T = meet(n1, n2)
@@ -110,6 +111,7 @@ object Type:
         implicit val typeIsReal: RealLattice[R] = new BaseInstance("Real") with RealLattice[R] {
             def inject(x: Double): T = Top
             def toInt[I2: IntLattice](n: T): I2 = n.to[I2]
+            def toComplex[Comp2: NumberLattice](n: T): Comp2 = n.to[Comp2]
             def ceiling(n: T): T = n
             def floor(n: T): T = n
             def round(n: T): T = n
@@ -135,10 +137,8 @@ object Type:
 
         implicit val typeIsComplex: NumberLattice[Comp] = new BaseInstance("Complex") with NumberLattice[Comp] {
             def inject(x: Double): T = Top
-            def toInt[I2: IntLattice](n: T): I2 = n.to[I2]
-            def ceiling(n: T): T = n
-            def floor(n: T): T = n
-            def round(n: T): T = n
+            def inject(x: Complex[Double]): T = Top
+            def inject(x: BigInt): T = Top
             def log(n: T): T = n
             def random(n: T): T = n
             def sin(n: T): T = n
@@ -153,10 +153,6 @@ object Type:
             def times(n1: T, n2: T): T = meet(n1, n2)
             def div(n1: T, n2: T): T = meet(n1, n2)
             def expt(n1: T, n2: T): T = meet(n1, n2)
-            def lt[B2: BoolLattice](n1: T, n2: T): B2 = (n1, n2) match
-                case (Top, Top) => BoolLattice[B2].top
-                case _ => BoolLattice[B2].bottom
-            def toString[S2: StringLattice](n: T): S2 = n.to[S2]
         }
         implicit val typeIsChar: CharLattice[C] = new BaseInstance("Char") with CharLattice[C] {
             def inject(c: Char): T = Top

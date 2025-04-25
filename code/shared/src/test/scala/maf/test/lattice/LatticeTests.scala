@@ -70,14 +70,13 @@ abstract class LatticeTest[L: Lattice](gen: LatticeGenerator[L]) extends Lattice
         }
     checkAll(laws)
 
-given[I: IntLattice, R: RealLattice]: NumericTowerLattice[I, R] = new NumericTowerLattice[I, R]
-abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLattice](gen: LatticeGenerator[(I, R)]) extends LatticeTest[(I, R)](gen):
+given[I: IntLattice, R: RealLattice, Comp: NumberLattice]: NumericTowerLattice[I, R, Comp] = new NumericTowerLattice[I, R, Comp]
+abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, Comp: NumberLattice, B: BoolLattice](gen: LatticeGenerator[(I, R, Comp)]) extends LatticeTest[(I, R, Comp)](gen):
     val numbLaws: Properties =
         newProperties("Numb") { p =>
             implicit val arb = gen.anyArb
-            val lat: NumericTowerLattice[I, R] = new NumericTowerLattice[I, R]
+            val lat: NumericTowerLattice[I, R, Comp] = new NumericTowerLattice[I, R, Comp]
             import lat._
-
             /** Conversion to int preserves bottom */
             p.property("toInt(⊥) = ⊥") = toInt(bottom)._1 == IntLattice[I].bottom
 
@@ -85,15 +84,15 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
             p.property("toReal(⊥) = ⊥") = toReal(bottom)._2 == RealLattice[R].bottom
 
             /** Conversion to real is monotone */
-            p.property("∀ a, b: a ⊑ b ⇒ toReal(a) ⊑ toReal(b)") = forAll { (b: (I, R)) =>
-                forAll(gen.le(b)) { (a: (I, R)) =>
+            p.property("∀ a, b: a ⊑ b ⇒ toReal(a) ⊑ toReal(b)") = forAll { (b: (I, R, Comp)) =>
+                forAll(gen.le(b)) { (a: (I, R, Comp)) =>
                     conditional(subsumes(b, a), RealLattice[R].subsumes(getReal(toReal(b)), getReal(toReal(a))))
                 }
             }
 
             /** Conversion to int is monotone */
-            p.property("∀ a, b: a ⊑ b ⇒ toInt(a) ⊑ toInt(b)") = forAll { (b: (I, R)) =>
-                forAll(gen.le(b)) { (a: (I, R)) =>
+            p.property("∀ a, b: a ⊑ b ⇒ toInt(a) ⊑ toInt(b)") = forAll { (b: (I, R, Comp)) =>
+                forAll(gen.le(b)) { (a: (I, R, Comp)) =>
                     conditional(subsumes(b, a), IntLattice[I].subsumes(getInt(toInt(b)), getInt(toInt(a))))
                 }
             }
@@ -107,11 +106,11 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
                  forAll((a: Double) => IntLattice[I].subsumes(getInt(toInt(inject(a))), IntLattice[I].inject(a.toInt)))
 
             /** Addition preserves bottom */
-            p.property("plus(a, ⊥) = ⊥ = plus(⊥, a)") = forAll((a: (I, R)) => plus(a, bottom)== bottom && plus(bottom, a) == bottom)
+            p.property("plus(a, ⊥) = ⊥ = plus(⊥, a)") = forAll((a: (I, R, Comp)) => plus(a, bottom)== bottom && plus(bottom, a) == bottom)
 
             /** Addition is monotone */
-            p.property("∀ a, b, c: b ⊑ c ⇒ plus(a, b) ⊑ plus(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
-                forAll(gen.le(c)) { (b: (I, R)) =>
+            p.property("∀ a, b, c: b ⊑ c ⇒ plus(a, b) ⊑ plus(a, c)") = forAll { (a: (I, R, Comp), c: (I, R, Comp)) =>
+                forAll(gen.le(c)) { (b: (I, R, Comp)) =>
                     conditional(subsumes(c, b), subsumes(plus(a, c), plus(a, b)))
                 }
             }
@@ -123,7 +122,7 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
 
             /** Addition is associative */
             p.property("∀ a, b, c: plus(a, plus(b, c)) == plus(plus(a, b), c)") =
-                forAll((a: (I, R), b: (I, R), c: (I, R)) =>
+                forAll((a: (I, R, Comp), b: (I, R, Comp), c: (I, R, Comp)) =>
                     val eerste = plus(a, plus(b, c))
                     val tweede = plus(plus(a, b), c)
                     if eerste != tweede then
@@ -134,14 +133,14 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
                 )
 
             /** Addition is commutative */
-            p.property("∀ a, b: plus(a, b) == plus(b, a)") = forAll((a: (I, R), b: (I, R)) => plus(a, b) == plus(b, a))
+            p.property("∀ a, b: plus(a, b) == plus(b, a)") = forAll((a: (I, R, Comp), b: (I, R, Comp)) => plus(a, b) == plus(b, a))
 
             /** Subtraction preserves bottom */
-            p.property("minus(a, ⊥) = ⊥ = minus(⊥, a)") = forAll((a: (I, R)) => minus(a, bottom) == bottom && minus(bottom, a) == bottom)
+            p.property("minus(a, ⊥) = ⊥ = minus(⊥, a)") = forAll((a: (I, R, Comp)) => minus(a, bottom) == bottom && minus(bottom, a) == bottom)
 
             /** Subtraction is monotone */
-            p.property("∀ a, b, c: b ⊑ c ⇒ minus(a, b) ⊑ minus(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
-                forAll(gen.le(c)) { (b: (I, R)) =>
+            p.property("∀ a, b, c: b ⊑ c ⇒ minus(a, b) ⊑ minus(a, c)") = forAll { (a: (I, R, Comp), c: (I, R, Comp)) =>
+                forAll(gen.le(c)) { (b: (I, R, Comp)) =>
                     conditional(subsumes(c, b), subsumes(minus(a, c), minus(a, b)))
                 }
             }
@@ -151,14 +150,14 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
                 forAll((a: BigInt, b: BigInt) => subsumes(minus(inject(a), inject(b)), inject(a - b)))
 
             /** Subtraction is anticommutative */
-            p.property("∀ a, b: minus(a, b) == minus(inject(0), minus(b, a))") = forAll((a: (I, R), b: (I, R)) => minus(a, b) == minus(inject(0), minus(b, a)))
+            p.property("∀ a, b: minus(a, b) == minus(inject(0), minus(b, a))") = forAll((a: (I, R, Comp), b: (I, R, Comp)) => minus(a, b) == minus(inject(0), minus(b, a)))
 
             /** Multiplication preserves bottom */
-            p.property("times(a, ⊥) = ⊥ = times(⊥, a)") = forAll((a: (I, R)) => times(a, bottom) == bottom && times(bottom, a) == bottom)
+            p.property("times(a, ⊥) = ⊥ = times(⊥, a)") = forAll((a: (I, R, Comp)) => times(a, bottom) == bottom && times(bottom, a) == bottom)
 
             /** Multiplication is monotone */
-            p.property("∀ a, b, c: b ⊑ c ⇒ times(a, b) ⊑ times(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
-                forAll(gen.le(c)) { (b: (I, R)) =>
+            p.property("∀ a, b, c: b ⊑ c ⇒ times(a, b) ⊑ times(a, c)") = forAll { (a: (I, R, Comp), c: (I, R, Comp)) =>
+                forAll(gen.le(c)) { (b: (I, R, Comp)) =>
                     conditional(subsumes(c, b), subsumes(times(a, c), times(a, b)))
                 }
             }
@@ -169,18 +168,18 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
 
             /** Multiplication is associative */
             p.property("∀ a, b, c: times(a, times(b, c)) == times(times(a, b), c)") =
-                forAll((a: (I, R), b: (I, R), c: (I, R)) => times(a, times(b, c)) == times(times(a, b), c))
+                forAll((a: (I, R, Comp), b: (I, R, Comp), c: (I, R, Comp)) => times(a, times(b, c)) == times(times(a, b), c))
 
             /** Multiplication is commutative */
-            p.property("∀ a, b: times(a, b) == times(b, a)") = forAll((a: (I, R), b: (I, R)) => times(a, b) == times(b, a))
+            p.property("∀ a, b: times(a, b) == times(b, a)") = forAll((a: (I, R, Comp), b: (I, R, Comp)) => times(a, b) == times(b, a))
 
             /** Quotient preserves bottom */
             p.property("div(a, ⊥) = ⊥ = div(⊥, a)") =
-                forAll((a: (I, R)) => quotient(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), quotient(bottom, a) == bottom))
+                forAll((a: (I, R, Comp)) => quotient(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), quotient(bottom, a) == bottom))
 
             /** Quotient is monotone */
-            p.property("∀ a, b, c: b ⊑ c ⇒ div(a, b) ⊑ div(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
-                forAll(gen.le(c)) { (b: (I, R)) =>
+            p.property("∀ a, b, c: b ⊑ c ⇒ div(a, b) ⊑ div(a, c)") = forAll { (a: (I, R, Comp), c: (I, R, Comp)) =>
+                forAll(gen.le(c)) { (b: (I, R, Comp)) =>
                     conditional(subsumes(c, b) && !subsumes(b, inject(0)) && !subsumes(c, inject(0)), subsumes(quotient(a, c), quotient(a, b)))
                 }
             }
@@ -192,11 +191,11 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
 
             /** Modulo preserves bottom */
             p.property("modulo(a, ⊥) = ⊥ = modulo(⊥, a)") =
-                forAll((a: (I, R)) => modulo(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), modulo(bottom, a) == bottom))
+                forAll((a: (I, R, Comp)) => modulo(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), modulo(bottom, a) == bottom))
 
             /** Modulo is monotone */
-            p.property("∀ a, b, c: b ⊑ c ⇒ modulo(a, b) ⊑ modulo(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
-                forAll(gen.le(c)) { (b: (I, R)) =>
+            p.property("∀ a, b, c: b ⊑ c ⇒ modulo(a, b) ⊑ modulo(a, c)") = forAll { (a: (I, R, Comp), c: (I, R, Comp)) =>
+                forAll(gen.le(c)) { (b: (I, R, Comp)) =>
                     conditional(subsumes(c, b) && !subsumes(c, inject(0)) && !subsumes(b, inject(0)), subsumes(modulo(a, c), modulo(a, b)))
                 }
             }
@@ -208,11 +207,11 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
 
             /** Remainder preserves bottom */
             p.property("rem(a, ⊥) = ⊥ = rem(⊥, a) (if a ≠ 0)") =
-                forAll((a: (I, R)) => remainder(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), remainder(bottom, a) == bottom))
+                forAll((a: (I, R, Comp)) => remainder(a, bottom) == bottom && conditional(!subsumes(a, inject(0)), remainder(bottom, a) == bottom))
 
             /** Remainder is monotone */
-            p.property("∀ a, b, c: b ⊑ c ⇒ rem(a, b) ⊑ rem(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
-                forAll(gen.le(c)) { (b: (I, R)) =>
+            p.property("∀ a, b, c: b ⊑ c ⇒ rem(a, b) ⊑ rem(a, c)") = forAll { (a: (I, R, Comp), c: (I, R, Comp)) =>
+                forAll(gen.le(c)) { (b: (I, R, Comp)) =>
                     conditional(subsumes(c, b) && !subsumes(c, inject(0)) && !subsumes(b, inject(0)), subsumes(remainder(a, c), remainder(a, b)))
                 }
             }
@@ -223,11 +222,11 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
 
             /** Less-than operation preserves bottom */
             p.property("lt(a, ⊥) = ⊥ = lt(⊥, a)") =
-                forAll((a: (I, R)) => lt[B](a, bottom) == BoolLattice[B].bottom && lt[B](bottom, a) == BoolLattice[B].bottom)
+                forAll((a: (I, R, Comp)) => lt[B](a, bottom) == BoolLattice[B].bottom && lt[B](bottom, a) == BoolLattice[B].bottom)
 
             /** Less-than operation is monotone */
-            p.property("∀ a, b, c: b ⊑ c ⇒ lt(a, b) ⊑ lt(a, c)") = forAll { (a: (I, R), c: (I, R)) =>
-                forAll(gen.le(c)) { (b: (I, R)) =>
+            p.property("∀ a, b, c: b ⊑ c ⇒ lt(a, b) ⊑ lt(a, c)") = forAll { (a: (I, R, Comp), c: (I, R, Comp)) =>
+                forAll(gen.le(c)) { (b: (I, R, Comp)) =>
                     conditional(subsumes(b, c), BoolLattice[B].subsumes(lt[B](a, c), lt[B](a, b)))
                 }
             }
@@ -241,8 +240,8 @@ abstract class NumericTowerLatticeTest[I: IntLattice, R: RealLattice, B: BoolLat
             p.property("ceiling(⊥) = ⊥") = ceiling(bottom) == bottom
 
             /** Ceiling is monotone */
-            p.property("∀ a, b: a ⊑ b ⇒ ceiling(a) ⊑ ceiling(b)") = forAll { (b: (I, R)) =>
-                forAll(gen.le(b)) { (a: (I, R)) =>
+            p.property("∀ a, b: a ⊑ b ⇒ ceiling(a) ⊑ ceiling(b)") = forAll { (b: (I, R, Comp)) =>
+                forAll(gen.le(b)) { (a: (I, R, Comp)) =>
                     conditional(subsumes(b, a), subsumes(ceiling(b), ceiling(a)))
                 }
             }
@@ -707,5 +706,5 @@ class ConstantPropagationCharTest extends CharLatticeTest[ConstantPropagation.C]
 class ConstantPropagationSymbolTest extends SymbolLatticeTest[ConstantPropagation.Sym](ConstantPropagationSymbolGenerator)
 
 class ELTest extends ExactLatticeTest(ExactLatticeGenerator)
-class ConstantPropagationNumericTowerTest extends NumericTowerLatticeTest[ConstantPropagation.I, ConstantPropagation.R, ConstantPropagation.B](ConstantPropagationNumericTowerGenerator)
-class ConcreteNumericTowerTest extends NumericTowerLatticeTest[Concrete.I, Concrete.R, Concrete.B](ConcreteNumericTowerGenerator)
+class ConstantPropagationNumericTowerTest extends NumericTowerLatticeTest[ConstantPropagation.I, ConstantPropagation.R, ConstantPropagation.Comp, ConstantPropagation.B](ConstantPropagationNumericTowerGenerator)
+class ConcreteNumericTowerTest extends NumericTowerLatticeTest[Concrete.I, Concrete.R, Concrete.Comp, Concrete.B](ConcreteNumericTowerGenerator)

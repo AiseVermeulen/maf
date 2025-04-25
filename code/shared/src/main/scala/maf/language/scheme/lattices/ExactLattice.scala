@@ -1,6 +1,7 @@
 package maf.language.scheme.lattices
 
 import maf.lattice.interfaces.{BoolLattice, NumberLattice}
+import spire.math.Complex
 
 sealed trait E
 
@@ -22,6 +23,8 @@ class ExactLattice extends NumberLattice[E]{
 
     override def inject(n: Double): E = top //inexact
 
+    override def inject(n: Complex[Double]): E = exact
+
     override def bottom: E = exactLatticeBottom
 
     override def top: E = exactLatticeTop
@@ -35,9 +38,9 @@ class ExactLattice extends NumberLattice[E]{
             top    
             
     
-    override def toInt(n: E): E = n
+    def toInt(n: E): E = n
 
-    override def lt[B: BoolLattice](n1: E, n2: E): B = BoolLattice[B].top //fout
+    def lt[B: BoolLattice](n1: E, n2: E): B = BoolLattice[B].top //fout
     override def eql[B: BoolLattice](n1: E, n2: E): B = BoolLattice[B].top //fout
     
     private def contaminate(n1: E, n2: E): E =
@@ -77,7 +80,7 @@ class ExactLattice extends NumberLattice[E]{
     override def times(n1: E, n2: E): E =
         contaminate(n1, n2)
 
-    override def quotient(n1: E, n2: E): E =
+    def quotient(n1: E, n2: E): E =
         contaminate(n1, n2)    
 
     override def sqrt(n: E): E =
@@ -85,20 +88,20 @@ class ExactLattice extends NumberLattice[E]{
             case inexact => inexact
             case _ => top
 
-    override def exactToInexact(n: E): E =
+    def exactToInexact(n: E): E =
         inexact
 
-    override def toReal(n: E): E = n
+    def toReal(n: E): E = n
 
-    override def inexactToExact(n: E): E = exact
+    def inexactToExact(n: E): E = exact
 
-    override def ceiling(n: E): E = n
+    def ceiling(n: E): E = n
 
-    override def floor(n: E): E = n
+    def floor(n: E): E = n
 
     //override def random(n: E): E = exact
 
-    override def round(n: E): E = n
+    def round(n: E): E = n
 
     override def expt(n1: E, n2: E): E = contaminate(n1, n2)
 
@@ -116,9 +119,9 @@ class ExactLattice extends NumberLattice[E]{
 
     override def log(n: E): E = top //nog aanpassen
 
-    override def modulo(n1: E, n2: E): E = contaminate(n1, n2)
+    def modulo(n1: E, n2: E): E = contaminate(n1, n2)
 
     override def div(n1: E, n2: E): E = top /// nog aanpassen
 
-    override def remainder(n1: E, n2: E): E = contaminate(n1, n2)
+    def remainder(n1: E, n2: E): E = contaminate(n1, n2)
 }
