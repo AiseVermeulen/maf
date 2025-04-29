@@ -11,13 +11,11 @@ import scala.concurrent.duration._
 
 object DailyPrecisionBenchmarks
     extends AnalysisComparison[
-      ConstantPropagation.I,
-      ConstantPropagation.R,
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
       ConstantPropagation.Sym,
-      ConstantPropagation.Comp
+      ConstantPropagation.N
     ]:
     // analyses to compare
     def baseAnalysis(prg: SchemeExp): Analysis =

@@ -14,7 +14,7 @@ trait IncrementalModularSchemeLatticeTests extends AnyPropSpec:
 
     lazy val testTags: Seq[Tag] = Seq(IncrementalTest, SlowTest)
 
-    lazy val wrapper: IncrementalModularSchemeLattice[Address, _, _, _, _, _, _, _]
+    lazy val wrapper: IncrementalModularSchemeLattice[Address, _, _, _, _, _]
     private lazy val lattice = wrapper.incrementalSchemeLattice
     private lazy val adr1: VarAddr[Unit] = VarAddr(Identifier("adr1", NoCodeIdentity), ())
     private lazy val adr2: VarAddr[Unit] = VarAddr(Identifier("adr2", NoCodeIdentity), ())

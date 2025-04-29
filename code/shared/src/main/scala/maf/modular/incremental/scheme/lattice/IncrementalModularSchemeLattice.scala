@@ -18,12 +18,10 @@ class IncrementalModularSchemeLattice[
     A <: Address,
     S: StringLattice,
     B: BoolLattice,
-    I: IntLattice,
-    R: RealLattice,
     C: CharLattice,
     Sym: SymbolLattice, 
-    Comp: NumberLattice]
-    extends ModularSchemeLattice[A, S, B, I, R, C, Sym, Comp]:
+    N: NumberLattice]
+    extends ModularSchemeLattice[A, S, B, C, Sym, N]:
 
     import Elements.*
 

@@ -43,6 +43,7 @@ object SchemeOp:
     case object IsString extends SchemeOp1("string?") with TypeOp
     case object IsInteger extends SchemeOp1("integer?") with TypeOp
     case object IsReal extends SchemeOp1("real?") with TypeOp
+    case object IsComplex extends SchemeOp1("complex?") with TypeOp
     case object IsVector extends SchemeOp1("vector?") with TypeOp
     case object IsThread extends SchemeOp1("thread?") with TypeOp
     case object IsLock extends SchemeOp1("lock?") with TypeOp
@@ -97,6 +98,7 @@ object SchemeOp:
       IsString,
       IsInteger,
       IsReal,
+      IsComplex,
       IsVector,
       IsThread,
       IsLock,

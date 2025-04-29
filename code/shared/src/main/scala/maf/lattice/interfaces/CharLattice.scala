@@ -7,7 +7,7 @@ trait CharLattice[C] extends Lattice[C]:
     def inject(c: Char): C
     def downCase(c: C): C
     def upCase(c: C): C
-    def toInt[I: IntLattice](c: C): I
+    def toInt[N: NumberLattice](c: C): N
     def toString[S: StringLattice](c: C): S
 
     def isLower[B: BoolLattice](c: C): B

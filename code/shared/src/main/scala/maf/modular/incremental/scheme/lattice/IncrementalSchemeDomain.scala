@@ -19,24 +19,20 @@ trait IncrementalModularSchemeDomain extends IncrementalSchemeDomain:
 trait IncrementalModularSchemeLatticeWrapper:
     type S
     type B
-    type I
-    type R
     type C
     type Sym
-    type Comp
+    type N
     // Contains the incremental modular Scheme lattice.
-    val modularLattice: IncrementalModularSchemeLattice[Address, S, B, I, R, C, Sym, Comp]
+    val modularLattice: IncrementalModularSchemeLattice[Address, S, B, C, Sym, N]
     // Primitive functions of Scheme.
     val primitives: IncrementalSchemeLatticePrimitives[modularLattice.AL, Address]
 
 object IncrementalSchemeTypeDomain extends IncrementalModularSchemeLatticeWrapper:
     type S = Type.S
     type B = ConstantPropagation.B
-    type I = Type.I
-    type R = Type.R
     type C = Type.C
     type Sym = Type.Sym
-    type Comp = Type.Comp
+    type N = Type.N
     final val modularLattice = new IncrementalModularSchemeLattice
     final val primitives = new IncrementalSchemeLatticePrimitives()(modularLattice.incrementalSchemeLattice)
 
@@ -47,11 +43,9 @@ trait IncrementalSchemeTypeDomain extends IncrementalModularSchemeDomain:
 object IncrementalSchemeConstantPropagationDomain extends IncrementalModularSchemeLatticeWrapper:
     type S = ConstantPropagation.S
     type B = ConstantPropagation.B
-    type I = ConstantPropagation.I
-    type R = ConstantPropagation.R
     type C = ConstantPropagation.C
     type Sym = ConstantPropagation.Sym
-    type Comp = ConstantPropagation.Comp
+    type N = ConstantPropagation.N
     final val modularLattice = new IncrementalModularSchemeLattice
     final val primitives = new IncrementalSchemeLatticePrimitives()(modularLattice.incrementalSchemeLattice)
 

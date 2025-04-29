@@ -10,8 +10,8 @@ import maf.language.scheme.primitives.SchemePrelude
 
 import scala.concurrent.duration.*
 
-abstract class AnalysisComparisonAlt[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Complex: NumberLattice]
-    extends PrecisionBenchmarks[Num, Rea, Bln, Chr, Str, Smb, Complex]:
+abstract class AnalysisComparisonAlt[Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Num: NumberLattice]
+    extends PrecisionBenchmarks[Bln, Chr, Str, Smb, Num]:
 
     // the precision comparison is parameterized by:
     // - the analyses to compare in terms of precision
@@ -68,13 +68,11 @@ abstract class AnalysisComparisonAlt[Num: IntLattice, Rea: RealLattice, Bln: Boo
 
 object AnalysisComparisonAlt1
     extends AnalysisComparisonAlt[
-      ConstantPropagation.I,
-      ConstantPropagation.R,
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
       ConstantPropagation.Sym, 
-      ConstantPropagation.Comp
+      ConstantPropagation.N
     ]:
     def k = 0
     def ls = List(100)

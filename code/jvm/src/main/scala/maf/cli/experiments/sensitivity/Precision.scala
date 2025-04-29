@@ -14,13 +14,11 @@ import scala.concurrent.duration._
 
 object PrecisionComparison
     extends AnalysisComparison[
-      ConstantPropagation.I,
-      ConstantPropagation.R,
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
       ConstantPropagation.Sym, 
-      ConstantPropagation.Comp
+      ConstantPropagation.N
     ]:
     val benchmarks =
         SchemeBenchmarkPrograms.gabriel ++

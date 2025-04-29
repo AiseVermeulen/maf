@@ -1,62 +1,18 @@
+/*
 package maf.language.scheme.lattices
 
 import maf.lattice.{AbstractWrapType, interfaces}
 import maf.lattice.interfaces.{BoolLattice, IntLattice, NumberLattice, RealLattice}
 import spire.math.Complex
 
-class NumericTowerLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] extends NumberLattice[(I, R, Comp)] {
-
-    private sealed trait NumType
-
-    private case class NInt(i: I) extends NumType
-    private case class NReal(r: R) extends NumType
-    private case class NComp(c: Comp) extends NumType
-
-    private def wrap(n: (I, R, Comp)): (NumType, NumType, NumType) = (NInt(n._1), NReal(n._2), NComp(n._3))
-
-    def getInt(n: (I, R, Comp)): I = n._1
-    def getReal(n: (I, R, Comp)): R = RealLattice[R].join(n._2, IntLattice[I].toReal[R](n._1))
-    def getComp(n: (I, R, Comp)): Comp = n._3
-
-    override def show(n: (I, R, Comp)): String =
-        "(" + IntLattice[I].show(n._1) +  ", " + RealLattice[R].show(n._2) + ", " + NumberLattice[Comp].show(n._3) + ")"
+class NumericTowerLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] extends NumberLattice[Comp] {
         
-    override def inject(n: Double): (I, R, Comp) =
-        if n == 0 then
-            inject(BigInt(0))
-        else
-            (IntLattice[I].bottom, RealLattice[R].inject(n), NumberLattice[Comp].bottom)
+    override def inject(n: Double): Comp = NumberLattice[Comp].inject(n)
+    override def inject(n: BigInt): Comp = NumberLattice[Comp].inject(n)
+    override def inject(n: Complex[Double]): Comp = NumberLattice[Comp].inject(n)
+
+    override def plus(n1: Comp, n2: Comp): Comp = ???
     
-   // override def inject(n: Double): (I, R, Comp) = (IntLattice[I].bottom, RealLattice[R].inject(n))
-    override def inject(n: BigInt): (I, R, Comp) = (IntLattice[I].inject(n), RealLattice[R].bottom, NumberLattice[Comp].bottom)
-    override def inject(n: Complex[Double]): (I, R, Comp) = (IntLattice[I].bottom, RealLattice[R].bottom, NumberLattice[Comp].inject(n))
-
-    override def top: (I, R, Comp) = (IntLattice[I].top, RealLattice[R].top, NumberLattice[Comp].top)
-    override def bottom: (I, R, Comp) = (IntLattice[I].bottom, RealLattice[R].bottom, NumberLattice[Comp].bottom)
-
-    private def intBottom: I = IntLattice[I].bottom
-    private def realBottom: R = RealLattice[R].bottom
-
-    private def intTop: I = IntLattice[I].top
-    private def realTop: R = RealLattice[R].top
-
-    private def castToReal(i: I): R = IntLattice[I].toReal[R](i)
-    private def castToReal(n: NumType): R =
-        n match
-            case NInt(i) => castToReal(i)
-            case NReal(r) => r
-    private def castToComplex(n: NumType): Comp =
-        n match
-            case NInt(i) => IntLattice[I].toComplex[Comp](i)
-            case NReal(r) => RealLattice[R].toComplex[Comp](r)
-            case NComp(c) => c
-
-    override def subsumes(x: (I, R, Comp), y: => (I, R, Comp)): Boolean =
-        //(IntLattice[I].subsumes(getInt(x), getInt(y)) || RealLattice[R].subsumes(x._2, castToReal(getInt(y))))
-        IntLattice[I].subsumes(getInt(x), getInt(y)) &&  RealLattice[R].subsumes(getReal(x), getReal(y))
-    
-    override def join(x: (I, R, Comp), y: => (I, R, Comp)): (I, R, Comp) =
-        (IntLattice[I].join(x._1, y._1), RealLattice[R].join(x._2, y._2), NumberLattice[Comp].join(getComp(x), getComp(y)))
 
     private def foldMap(f: (NumType, NumType) => NumType, n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) =
         var intRes = intBottom
@@ -103,11 +59,6 @@ class NumericTowerLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] ex
             n1,
             n2
         )
-
-    override def plus(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = contaminate(n1, n2, IntLattice[I].plus, RealLattice[R].plus, NumberLattice[Comp].plus)
-    override def minus(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = contaminate(n1, n2, IntLattice[I].minus, RealLattice[R].minus, NumberLattice[Comp].minus)
-    override def times(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = contaminate(n1, n2, IntLattice[I].times, RealLattice[R].times, NumberLattice[Comp].times)
-    override def expt(n1: (I, R, Comp), n2: (I, R, Comp)): (I, R, Comp) = contaminate(n1, n2, IntLattice[I].expt, RealLattice[R].expt, NumberLattice[Comp].expt)
 
     private def compare[B: BoolLattice](n1: (I, R, Comp), n2: (I, R, Comp), fCompare: (R, R) => B): B =
         var res: B = BoolLattice[B].bottom
@@ -189,3 +140,5 @@ class NumericTowerLattice[I: IntLattice, R: RealLattice, Comp: NumberLattice] ex
                 case NComp(c) => NComp(NumberLattice[Comp].log(c)),
         n)
 }
+
+ */

@@ -22,13 +22,11 @@ import maf.language.ContractScheme.ContractValues.*
  */
 object ScvPrecisionComparison
     extends AnalysisComparisonAlt[
-      ConstantPropagation.I,
-      ConstantPropagation.R,
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
       ConstantPropagation.Sym,
-      ConstantPropagation.Comp
+      ConstantPropagation.N
     ]:
 
     def analyses: List[(SchemeExp => Analysis, String)] = List(

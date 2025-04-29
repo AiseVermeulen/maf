@@ -28,13 +28,11 @@ class Product2ModularSchemeLattice[
     A <: Address,
     S: StringLattice,
     B: BoolLattice,
-    I: IntLattice,
-    R: RealLattice,
     C: CharLattice,
     Sym: SymbolLattice,
-    Comp: NumberLattice,
+    N: NumberLattice,
     O: Lattice]
-    extends ModularSchemeLattice[A, S, B, I, R, C, Sym, Comp]:
+    extends ModularSchemeLattice[A, S, B, C, Sym, N]:
 
     case class PL(left: L, right: O):
         def mapLeft(f: L => L): PL =

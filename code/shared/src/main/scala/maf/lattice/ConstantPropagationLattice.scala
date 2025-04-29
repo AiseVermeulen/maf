@@ -70,7 +70,7 @@ object ConstantPropagation:
     type R = L[Double]
     type C = L[Char]
     type Sym = L[String]
-    type Comp = L[Complex[Double]]
+    type N = L[Complex[Double]]
 
     object L:
         implicit val boolCP: BoolLattice[B] = new BaseInstance[Boolean]("Bool") with BoolLattice[B] {
@@ -91,38 +91,38 @@ object ConstantPropagation:
 
         implicit val stringCP: StringLattice[S] = new BaseInstance[String]("Str") with StringLattice[S] {
             def inject(x: String): S = Constant(x)
-            def length[I2: IntLattice](s: S): I2 = s match
-                case Top         => IntLattice[I2].top
-                case Constant(s) => IntLattice[I2].inject(s.length)
-                case Bottom      => IntLattice[I2].bottom
+            def length[N2: NumberLattice](s: S): N2 = s match
+                case Top         => NumberLattice[N2].top
+                case Constant(s) => NumberLattice[N2].inject(s.length)
+                case Bottom      => NumberLattice[N2].bottom
             def append(s1: S, s2: S): S = (s1, s2) match
                 case (Bottom, _) | (_, Bottom)  => Bottom
                 case (Top, _) | (_, Top)        => Top
                 case (Constant(x), Constant(y)) => Constant(x ++ y)
-            def substring[I2: IntLattice](
+            def substring[N2: NumberLattice](
                 s: S,
-                from: I2,
-                to: I2
+                from: N2,
+                to: N2
               ): S = (s, from, to) match
                 case (Bottom, _, _)                                => Bottom
-                case (_, from, _) if IntLattice[I2].isBottom(from) => Bottom
-                case (_, _, to) if IntLattice[I2].isBottom(to)     => Bottom
+                case (_, from, _) if NumberLattice[N2].isBottom(from) => Bottom
+                case (_, _, to) if NumberLattice[N2].isBottom(to)     => Bottom
                 case (Top, _, _)                                   => Top
                 case (Constant(s), from, to)                       =>
                     // This is duplicated code from ConcreteLattice, it should be refactored
                     (0.to(s.size)
                         .collect({
-                            case from2 if BoolLattice[B].isTrue(IntLattice[I2].eql[B](from, IntLattice[I2].inject(from2))) =>
+                            case from2 if BoolLattice[B].isTrue(NumberLattice[N2].eql[B](from, NumberLattice[N2].inject(from2))) =>
                                 (from2
                                     .to(s.size)
                                     .collect({
-                                        case to2 if BoolLattice[B].isTrue(IntLattice[I2].eql[B](to, IntLattice[I2].inject(to2))) =>
+                                        case to2 if BoolLattice[B].isTrue(NumberLattice[N2].eql[B](to, NumberLattice[N2].inject(to2))) =>
                                             inject(s.substring(from2, to2).nn)
                                     }))
                         })
                         .flatten)
                         .foldLeft(bottom)((s1, s2) => join(s1, s2))
-            def ref[I2: IntLattice, C2: CharLattice](s: S, i: I2): C2 = s match
+            def ref[N2: NumberLattice, C2: CharLattice](s: S, i: N2): C2 = s match
                 case Bottom      => CharLattice[C2].bottom
                 case Top         => CharLattice[C2].top
                 case Constant(x) =>
@@ -131,18 +131,18 @@ object ConstantPropagation:
                         .collect({
                             case i2
                                 if BoolLattice[Concrete.B]
-                                    .isTrue(IntLattice[I2].eql[Concrete.B](i, IntLattice[I2].inject(i2))) &&
+                                    .isTrue(NumberLattice[N2].eql[Concrete.B](i, NumberLattice[N2].inject(i2))) &&
                                     i2 < x.size =>
                                 CharLattice[C2].inject(x.charAt(i2))
                         })
                         .foldLeft(CharLattice[C2].bottom)((c1, c2) => CharLattice[C2].join(c1, c2))
-            def set[I2: IntLattice, C2: CharLattice](
+            def set[N2: NumberLattice, C2: CharLattice](
                 s: S,
-                i: I2,
+                i: N2,
                 c: C2
               ): S = s match
                 case Bottom                                                         => Bottom
-                case _ if IntLattice[I2].isBottom(i) || CharLattice[C2].isBottom(c) => Bottom
+                case _ if NumberLattice[N2].isBottom(i) || CharLattice[C2].isBottom(c) => Bottom
                 case Top                                                            => Top
                 case Constant(str) =>
                     (i, c) match
@@ -158,10 +158,10 @@ object ConstantPropagation:
                 case Top         => SymbolLattice[Sym2].top
                 case Constant(x) => SymbolLattice[Sym2].inject(x)
 
-            def toNumber[I2: IntLattice](s: S) = s match
-                case Bottom        => MayFail.success(IntLattice[I2].bottom)
-                case Constant(str) => MayFail.fromOption(NumOps.bigIntFromString(str).map(IntLattice[I2].inject))(NotANumberString)
-                case Top           => MayFail.success(IntLattice[I2].top).addError(NotANumberString)
+            def toNumber[N2: NumberLattice](s: S) = s match
+                case Bottom        => MayFail.success(NumberLattice[N2].bottom)
+                case Constant(str) => MayFail.fromOption(NumOps.bigIntFromString(str).map(NumberLattice[N2].inject))(NotANumberString)
+                case Top           => MayFail.success(NumberLattice[N2].top).addError(NotANumberString)
         }
 
         implicit val intCP: IntLattice[I] = new BaseInstance[BigInt]("Int") with IntLattice[I] {
@@ -172,10 +172,10 @@ object ConstantPropagation:
                 case Constant(x) => RealLattice[R2].inject(x.toDouble)
                 case Bottom      => RealLattice[R2].bottom
 
-            def toComplex[Comp2: NumberLattice](n: I): Comp2 = n match
-                case Top => NumberLattice[Comp2].top
-                case Constant(x) => NumberLattice[Comp2].inject(Complex[Double](x.toDouble))
-                case Bottom => NumberLattice[Comp2].bottom    
+            def toComplex[N2: NumberLattice](n: I): N2 = n match
+                case Top => NumberLattice[N2].top
+                case Constant(x) => NumberLattice[N2].inject(Complex[Double](x.toDouble))
+                case Bottom => NumberLattice[N2].bottom    
 
             def random(n: I): I = n match
                 case Bottom => Bottom
@@ -293,7 +293,7 @@ object ConstantPropagation:
             def atan(n: R): R = n match
                 case Constant(x) => Constant(scala.math.atan(x))
                 case _           => n
-            def sqrt(n: R): R = n match 
+            def sqrt(n: R): R = n match
                 case Constant(x) if x >= 0 => Constant(scala.math.sqrt(x))
                 case Top                   => Top
                 case _                     => Bottom
@@ -324,74 +324,239 @@ object ConstantPropagation:
                 case Bottom      => StringLattice[S2].bottom
         }
 
-        implicit val complexCP: NumberLattice[Comp] = new BaseInstance[Complex[Double]]("Complex") with NumberLattice[Comp] {
+        implicit val complexCP: NumberLattice[N] = new BaseInstance[Complex[Double]]("Complex") with NumberLattice[N] {
+
             def inject(x: Complex[Double]) = Constant(x)
             def inject(x: BigInt) = inject(Complex[Double](x))
             def inject(x: Double) = inject(Complex[Double](x))
-            def log(n: Comp): Comp = n match 
-                case Constant(x) => Constant[Complex[Double]](x.log)
-                case Top => Top
-                case _ => Bottom
+            
+            case object Real extends L[Nothing]
+            case object Integer extends L[Nothing]
+            
+            val real = Real
+            val integer = Integer
 
-            def sin(n: Comp): Comp = n match
+            def isInteger(n: Complex[Double]): Boolean =
+                n.isReal && (scala.math.round(n.real) == n.real)
+
+            def isInteger[B2: BoolLattice](n: N): B2 =
+                n match
+                    case Constant(x) => BoolLattice[B2].inject(isInteger(x))
+                    case Bottom => BoolLattice[B2].bottom
+                    case Integer => BoolLattice[B2].inject(true)
+                    case _ => BoolLattice[B2].top ///???????
+
+            def isReal(n: Complex[Double]): Boolean =
+                n.isReal && (scala.math.round(n.real) != n.real)
+
+            override def isReal[B2: BoolLattice](n: N): B2 =
+                n match
+                    case Constant(x) => BoolLattice[B2].inject(isReal(x))
+                    case Bottom => BoolLattice[B2].bottom
+                    case Real => BoolLattice[B2].inject(true)
+                    case Integer => BoolLattice[B2].inject(true)
+                    case _ => BoolLattice[B2].top ///???????
+
+            def isComplex(n: Complex[Double]): Boolean =
+                n.imag != 0
+
+            override def isComplex[B2: BoolLattice](n: N): B2 =
+                n match
+                    case Bottom => BoolLattice[B2].bottom
+                    case _ => BoolLattice[B2].inject(true) // ????
+
+            override def subsumes(x: N, y: => N): Boolean = x match
+                case Top => true
+                case Real => y match
+                    case Constant(z) => !isComplex(z)
+                    case Top => false
+                    case _ => true
+                case Integer => y match
+                    case Constant(z) => isInteger(z)
+                    case Integer => true
+                    case Bottom => true
+                    case _ => false
+                case Constant(_) =>
+                    y match
+                        case Constant(_) => x == y
+                        case Bottom => true
+                        case _ => false
+                case Bottom =>
+                    y match
+                        case Bottom => true
+                        case _ => false
+
+            override def join(x: N, y: => N): N =
+                (x, y) match
+                    case (Top, _) => Top
+                    case (_, Top) => Top
+                    case (Bottom, _) => y
+                    case (_, Bottom) => x
+                    case (Constant(a), Constant(b)) =>
+                        if a == b then x
+                        else if isComplex(a) || isComplex(b) then Top
+                        else if isReal(a) || isReal(b) then Real
+                        else Integer
+                    case (Constant(a), _) =>
+                        if isComplex(a) then Top
+                        else
+                            y match
+                                case Real => Real
+                                case Integer => if isInteger(a) then Integer else Real
+                    case (_, Constant(a)) =>
+                        if isComplex(a) then Top
+                        else
+                            x match
+                                case Real => Real
+                                case Integer => if isInteger(a) then Integer else Real
+                    case (Real, _) => Real
+                    case (_, Real) => Real
+                    case (Integer, Integer) => Integer
+
+            def generalRound(n: N, f: Double => Double): N =
+                n match
+                    case Integer => Integer
+                    case Real => Integer
+                    case Top => Top // klopt dit wel, aangezien er Complexe getallen bij zijn die niet afgerond kunnen worden
+                    case Constant(x) => if !isComplex(x) then Constant(Complex[Double](f(x.real)))
+                                        else Top
+                    case _ => Bottom
+
+            def round(n: N): N =
+                generalRound(n, elem => scala.math.round(elem))
+
+            def floor(n: N): N =
+                generalRound(n, scala.math.floor)
+
+            def ceiling(n: N): N =
+                generalRound(n, MathOps.ceil)
+
+
+            def sin(n: N): N = n match
                 case Constant(x) => Constant(x.sin)
+                case Integer => Real
                 case _ => n
 
-            def asin(n: Comp): Comp = n match // TODO: use MayFail here for when x out of bounds
-                case Constant(x) => Constant(x.asin) //if -1 <= x && x <= 1 => Constant(x.asin) 
-                case Top => Top
-                case _ => Bottom
+            def asin(n: N): N = n match
+                case Constant(x) => if isComplex(x)
+                                        then Constant(x.asin)
+                                    else if  -1 <= x.real && x.real <= 1 then
+                                        Constant(x.asin)
+                                    else
+                                        Bottom
+                case Integer => Real
+                case _ => n
 
-            def cos(n: Comp): Comp = n match
+            def cos(n: N): N = n match
                 case Constant(x) => Constant(x.cos)
+                case Integer => Real
                 case _ => n
 
-            def acos(n: Comp): Comp = n match // TODO: use MayFail here for when x out of bounds
-                case Constant(x) => Constant(x.acos)// if -1 <= x && x <= 1 => Constant(x.acos) //ordering kan niet, en welke bounds heeft dit nodig?
-                case Top => Top
-                case _ => Bottom
-
-            def tan(n: Comp): Comp = n match // TODO: use MayFail here for when x out of bounds
-                case Constant(x) =>
-                    x.tan match
-                        case Double.NaN => Bottom
-                        case n => Constant(n)
+            def acos(n: N): N = n match
+                case Constant(x) => {
+                    if isComplex(x) then
+                        Constant(x.acos)
+                    else if -1 <= x.real && x.real <= 1 then
+                        Constant(x.acos)
+                    else
+                        Bottom
+                }
+                case Integer => Real
                 case _ => n
 
-            def atan(n: Comp): Comp = n match
+            def tan(n: N): N = n match
+                case Constant(x) => Constant(x.tan)
+                case Integer => Real
+                case _ => n
+
+            def atan(n: N): N = n match
                 case Constant(x) => Constant(x.atan)
+                case Integer => Real
                 case _ => n
 
-            def sqrt(n: Comp): Comp = n match 
+            def sqrt(n: N): N = n match 
                 case Constant(x) => Constant(x.sqrt)
-                case Top => Top
-                case _ => Bottom
+                case Real => Top
+                case Integer => Top
+                case _ => n
 
-            private def binop(
+            private def binop1(
                                  op: (Complex[Double], Complex[Double]) => Complex[Double],
-                                 n1: Comp,
-                                 n2: Comp
+                                 n1: N,
+                                 n2: N
                              ) = (n1, n2) match
-                case (Top, Top) => Top
-                case (Top, Constant(_)) => Top
-                case (Constant(_), Top) => Top
+                case (Bottom, _) => Bottom
+                case (_, Bottom) => Bottom
+                case (Top, _) => Top
+                case (_, Top) => Top
+                case (Real, Constant(x)) => if isComplex(x) then Top else Real
+                case (Constant(x), Real) => if isComplex(x) then Top else Real
+                case (Integer, Constant(x)) => if isInteger(x) then Integer else if isReal(x) then Real else Top
+                case (Constant(x), Integer) => if isInteger(x) then Integer else if isReal(x) then Real else Top
                 case (Constant(x), Constant(y)) => Constant(op(x, y))
-                case _ => Bottom
+                case (Real, _) => Real
+                case (_, Real) => Real
+                case _ => Integer
 
-            def plus(n1: Comp, n2: Comp): Comp = binop(_ + _, n1, n2)
+            def plus(n1: N, n2: N): N = binop1(_ + _, n1, n2)
+            def minus(n1: N, n2: N): N = binop1(_ - _, n1, n2)
+            def times(n1: N, n2: N): N = binop1(_ * _, n1, n2)
 
-            def minus(n1: Comp, n2: Comp): Comp = binop(_ - _, n1, n2)
+            private def binop2(
+                                  op: (Complex[Double], Complex[Double]) => Complex[Double],
+                                  n1: N,
+                                  n2: N
+                              ) = (n1, n2) match
+                case (Bottom, _) => Bottom
+                case (_, Bottom) => Bottom
+                case (Top, _) => Top
+                case (_, Top) => Top
+                case (Constant(x), Constant(y)) => Constant(op(x, y))
+                case (Constant(x), _) => if isComplex(x) then Top else Real
+                case (_, Constant(x)) => if isComplex(x) then Top else Real
+                case _ => Real
 
-            def times(n1: Comp, n2: Comp): Comp = binop(_ * _, n1, n2)
+            def div(n1: N, n2: N): N = binop2(_ / _, n1, n2)
+            def expt(n1: N, n2: N): N = binop1((x, y) => x.pow(y), n1, n2)
 
-            def div(n1: Comp, n2: Comp): Comp = binop(_ / _, n1, n2)
+            def log(n: N): N = n match
+                case Constant(x) => Constant(x.log)
+                case Top => Top
+                case _ => n
 
-            def expt(n1: Comp, n2: Comp): Comp = binop((x, y) => x.pow(y), n1, n2)
-
-            def toString[S2: StringLattice](n: Comp): S2 = n match
+            def toString[S2: StringLattice](n: N): S2 = n match
                 case Top => StringLattice[S2].top
                 case Constant(x) => StringLattice[S2].inject(x.toString)
                 case Bottom => StringLattice[S2].bottom
+
+            def lt[B2: BoolLattice](n1: N, n2: N): B2 =
+                (n1, n2) match
+                    case (Constant(x), Constant(y)) => {
+                        if isComplex(x) || isComplex(y) then
+                            BoolLattice[B2].bottom
+                        else
+                            BoolLattice[B2].inject(x.real < y.real)
+                    }
+                    case (Top, _) => BoolLattice[B2].bottom
+                    case (_, Top) => BoolLattice[B2].bottom
+                    case (Bottom, _) => BoolLattice[B2].bottom
+                    case (_, Bottom) => BoolLattice[B2].bottom
+                    case (Constant(x), _) => if isComplex(x) then BoolLattice[B2].bottom else BoolLattice[B2].top
+                    case (_, Constant(x)) => if isComplex(x) then BoolLattice[B2].bottom else BoolLattice[B2].top
+                    case _ => BoolLattice[B2].top
+
+            def RMQ(n1: N, n2: N, f: (Double, Double) => Double): N =
+                (n1, n2) match
+                    case (Constant(x), Constant(y)) => if isInteger(x) && isInteger(y) then Constant(Complex[Double](f(x.real, y.real))) else Bottom
+                    case (Constant(x), Integer) => if isInteger(x) then Integer else Bottom
+                    case (Integer, Constant(x)) => if isInteger(x) then Integer else Bottom
+                    case (Integer, Integer) => Integer
+                    case _ => Bottom
+
+            def remainder(n1: N, n2: N): N = RMQ(n1, n2, (x, y) => MathOps.remainder(x.toBigInt, y.toBigInt).toDouble)
+            def modulo(n1: N, n2: N): N = RMQ(n1, n2, (x, y) => MathOps.modulo(x.toBigInt, y.toBigInt).toDouble)
+            def quotient(n1: N, n2: N): N = RMQ(n1, n2, (x, y) => scala.math.floorDiv(x.toInt, y.toInt).toDouble)
+
         }
 
         implicit val charCP: CharLattice[C] = new BaseInstance[Char]("Char") with CharLattice[C] {
@@ -406,10 +571,10 @@ object ConstantPropagation:
                 case Top            => StringLattice[S2].top
                 case Constant(char) => StringLattice[S2].inject(char.toString)
                 case Bottom         => StringLattice[S2].bottom
-            def toInt[I2: IntLattice](c: C): I2 = c match
-                case Bottom      => IntLattice[I2].bottom
-                case Constant(c) => IntLattice[I2].inject(c.toInt)
-                case Top         => IntLattice[I2].top
+            def toInt[N2: NumberLattice](c: C): N2 = c match
+                case Bottom      => NumberLattice[N2].bottom
+                case Constant(c) => NumberLattice[N2].inject(c.toInt)
+                case Top         => NumberLattice[N2].top
             def isLower[B2: BoolLattice](c: C): B2 = c match
                 case Bottom         => BoolLattice[B2].bottom
                 case Constant(char) => BoolLattice[B2].inject(char.isLower)

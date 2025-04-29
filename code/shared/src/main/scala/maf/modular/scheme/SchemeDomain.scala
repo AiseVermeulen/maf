@@ -22,15 +22,13 @@ trait SchemeDomain extends AbstractDomain[SchemeExp]:
 trait ProvideModularLattice extends SchemeDomain:
     type S
     type B
-    type I
-    type R
     type C
     type Sym
-    type Comp
+    type N
 
-    lazy val modularLattice: ModularSchemeLattice[Address, S, B, I, R, C, Sym, Comp]
+    lazy val modularLattice: ModularSchemeLattice[Address, S, B, C, Sym, N]
 
-    def convertValue(baseDomain: ModularSchemeLattice[Address, S, B, I, R, C, Sym, Comp])(value: Value): baseDomain.L
+    def convertValue(baseDomain: ModularSchemeLattice[Address, S, B, C, Sym, N])(value: Value): baseDomain.L
 
 trait ModularSchemeDomain extends SchemeDomain:
     val modularLatticeWrapper: ModularSchemeLatticeWrapper
@@ -40,8 +38,6 @@ trait ModularSchemeDomain extends SchemeDomain:
 
     type S = modularLatticeWrapper.S
     type B = modularLatticeWrapper.B
-    type I = modularLatticeWrapper.I
-    type R = modularLatticeWrapper.R
     type C = modularLatticeWrapper.C
     type Sym = modularLatticeWrapper.Sym
 
@@ -53,13 +49,11 @@ trait ModularSchemeLatticeWrapper:
     // consists of several types
     type S
     type B
-    type I
-    type R
     type C
     type Sym
-    type Comp
+    type N
     // holds a modular lattice
-    val modularLattice: ModularSchemeLattice[Address, S, B, I, R, C, Sym, Comp]
+    val modularLattice: ModularSchemeLattice[Address, S, B, C, Sym, N]
     val primitives: SchemePrimitives[modularLattice.L, Address]
 
 //
@@ -71,11 +65,9 @@ object SchemeTypeDomain extends ModularSchemeLatticeWrapper:
     // use type domains everywhere, except for booleans
     type S = Type.S
     type B = ConstantPropagation.B
-    type I = Type.I
-    type R = Type.R
     type C = Type.C
     type Sym = Type.Sym
-    type Comp = Type.Comp
+    type N = Type.N
     // make the scheme lattice
     final val modularLattice = new ModularSchemeLattice
     final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
@@ -92,11 +84,9 @@ object SchemeConstantPropagationDomain extends ModularSchemeLatticeWrapper:
     // use constant propagation domains everywhere, except for booleans
     type S = ConstantPropagation.S
     type B = ConstantPropagation.B
-    type I = ConstantPropagation.I
-    type R = ConstantPropagation.R
     type C = ConstantPropagation.C
     type Sym = ConstantPropagation.Sym
-    type Comp = ConstantPropagation.Comp
+    type N = ConstantPropagation.N
     // make the scheme lattice
     final val modularLattice = new ModularSchemeLattice
     final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
@@ -114,11 +104,9 @@ object SchemePowersetDomain extends ModularSchemeLatticeWrapper:
     // use powerset domains everywhere
     type S = Concrete.S
     type B = Concrete.B
-    type I = Concrete.I
-    type R = Concrete.R
     type C = Concrete.C
     type Sym = Concrete.Sym
-    type Comp = Concrete.Comp
+    type N = Concrete.N
     // make the scheme lattice
     final val modularLattice = new ModularSchemeLattice
     final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
@@ -134,11 +122,9 @@ class SchemeBoundedDomainWrapper(val bound: Int) extends ModularSchemeLatticeWra
     object Bounded extends BoundedLattice(bound)
     type S = Bounded.S
     type B = Bounded.B
-    type I = Bounded.I
-    type R = Bounded.R
     type C = Bounded.C
     type Sym = Bounded.Sym
-    type Comp = Bounded.Comp
+    type N = Bounded.N
     final val modularLattice = new ModularSchemeLattice
     final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
 

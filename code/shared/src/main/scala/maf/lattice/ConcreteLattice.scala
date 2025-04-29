@@ -57,7 +57,7 @@ class ConcreteLattice:
     type I = L[BigInt]
     type R = L[Double]
     type C = L[Char]
-    type Comp = L[Complex[Double]]
+    type N = L[Complex[Double]]
     /* TODO[easy]: the bool lattice implementation could be specialized (see the old "ConcreteBoolEfficient" implementation). Whether this results in a speed improvement should be evaluated */
 
     object L:
@@ -69,33 +69,33 @@ class ConcreteLattice:
 
         implicit val stringConcrete: StringLattice[S] = new BaseInstance[String]("Str") with StringLattice[S] {
             def inject(x: String): S = makeValues(Set(x))
-            def length[I2: IntLattice](s: S): I2 = s.foldMap(s => IntLattice[I2].inject(s.length))
+            def length[N2: NumberLattice](s: S): N2 = s.foldMap(s => NumberLattice[N2].inject(s.length))
             def append(s1: S, s2: S): S = (s1, s2) match
                 case (Values(bot), _) if bot.isEmpty => makeValues(bot)
                 case (_, Values(bot)) if bot.isEmpty => makeValues(bot)
                 case (Top, _) | (_, Top)             => Top
                 case (Values(content1), Values(content2)) =>
                     makeValues(content1.foldMap(s1 => content2.map(s2 => s1 + s2)))
-            def substring[I2: IntLattice](
+            def substring[N2: NumberLattice](
                 s: S,
-                from: I2,
-                to: I2
+                from: N2,
+                to: N2
               ): S = (s, from, to) match
                 case (Values(bot), _, _) if bot.isEmpty            => makeValues(bot)
-                case (_, from, _) if IntLattice[I2].isBottom(from) => bottom
-                case (_, _, to) if IntLattice[I2].isBottom(to)     => bottom
+                case (_, from, _) if NumberLattice[N2].isBottom(from) => bottom
+                case (_, _, to) if NumberLattice[N2].isBottom(to)     => bottom
                 case (Top, _, _) | (_, Top, _) | (_, _, Top)       => Top /* This could be further refined, but that wouldn't be too useful */
                 case (Values(s), from, to)                         =>
                     // Assumptions: from and to are in the string, we perform no bound check
                     s.foldMap[S](s =>
                         (0.to(s.size)
                             .collect({
-                                case from2 if BoolLattice[B].isTrue(IntLattice[I2].eql[B](from, IntLattice[I2].inject(from2))) =>
+                                case from2 if BoolLattice[B].isTrue(NumberLattice[N2].eql[B](from, NumberLattice[N2].inject(from2))) =>
                                     (from2
                                         .to(s.size)
                                         .collect({
                                             case to2
-                                                if BoolLattice[B].isTrue(IntLattice[I2].eql[B](to, IntLattice[I2].inject(to2))) &&
+                                                if BoolLattice[B].isTrue(NumberLattice[N2].eql[B](to, NumberLattice[N2].inject(to2))) &&
                                                     from2 <= to2 =>
                                                 inject(s.substring(from2, to2).nn)
                                         }))
@@ -103,7 +103,7 @@ class ConcreteLattice:
                             .flatten)
                             .foldLeft(bottom)((s1, s2) => join(s1, s2))
                     )(stringConcrete)
-            def ref[I2: IntLattice, C2: CharLattice](s: S, i: I2): C2 = s match
+            def ref[N2: NumberLattice, C2: CharLattice](s: S, i: N2): C2 = s match
                 case Values(bot) if bot.isEmpty => CharLattice[C2].bottom
                 case Top                        => CharLattice[C2].top
                 case Values(content)            =>
@@ -113,18 +113,18 @@ class ConcreteLattice:
                             .collect({
                                 case i2
                                     if BoolLattice[B]
-                                        .isTrue(IntLattice[I2].eql[B](i, IntLattice[I2].inject(i2))) &&
+                                        .isTrue(NumberLattice[N2].eql[B](i, NumberLattice[N2].inject(i2))) &&
                                         i2 < s.size =>
                                     CharLattice[C2].inject(s.charAt(i2))
                             })
                             .foldLeft(CharLattice[C2].bottom)((c1, c2) => CharLattice[C2].join(c1, c2))
                     )
-            def set[I2: IntLattice, C2: CharLattice](
+            def set[N2: NumberLattice, C2: CharLattice](
                 s: S,
-                i: I2,
+                i: N2,
                 c: C2
               ): S = s match
-                case _ if s == bottom || IntLattice[I2].isBottom(i) || CharLattice[C2].isBottom(c) => bottom
+                case _ if s == bottom || NumberLattice[N2].isBottom(i) || CharLattice[C2].isBottom(c) => bottom
                 case _                                                                             => Top // TODO: more precise implementation
             def lt[B2: BoolLattice](s1: S, s2: S): B2 = (s1, s2) match
                 case (Values(bot), _) if bot.isEmpty => BoolLattice[B2].bottom
@@ -133,14 +133,14 @@ class ConcreteLattice:
                 case (Values(content1), Values(content2)) =>
                     content1.foldMap(s1 => content2.foldMap(s2 => BoolLattice[B2].inject(s1 < s2)))
             def toSymbol[Sym2: SymbolLattice](s: S): Sym2 = s.foldMap(s => SymbolLattice[Sym2].inject(s))
-            def toNumber[I2: IntLattice](s: S): MayFail[I2, Error] = s match
-                case Top => MayFail.success(IntLattice[I2].top).addError(NotANumberString)
+            def toNumber[N2: NumberLattice](s: S): MayFail[N2, Error] = s match
+                case Top => MayFail.success(NumberLattice[N2].top).addError(NotANumberString)
                 case Values(vs) =>
-                    vs.foldLeft(MayFail.success(IntLattice[I2].bottom): MayFail[I2, Error]) { (acc, str) =>
+                    vs.foldLeft(MayFail.success(NumberLattice[N2].bottom): MayFail[N2, Error]) { (acc, str) =>
                         for
-                            numv <- MayFail.fromOption[I2, Error](NumOps.bigIntFromString(str).map(IntLattice[I2].inject))(NotANumberString)
+                            numv <- MayFail.fromOption[N2, Error](NumOps.bigIntFromString(str).map(NumberLattice[N2].inject))(NotANumberString)
                             accv <- acc
-                        yield IntLattice[I2].join(accv, numv)
+                        yield NumberLattice[N2].join(accv, numv)
                     }
         }
         implicit val boolConcrete: BoolLattice[B] = new BaseInstance[Boolean]("Bool") with BoolLattice[B] {
@@ -245,23 +245,42 @@ class ConcreteLattice:
                 n.foldMap(n => StringLattice[S2].inject(n.toString))
         }
 
-        implicit val compConcrete: NumberLattice[Comp] = new BaseInstance[Complex[Double]]("Complex") with NumberLattice[Comp] {
-            def inject(x: Complex[Double]): Comp = makeValues(Set(x))
-            def inject(x: BigInt): Comp = inject(Complex[Double](x))
-            def inject(x: Double): Comp = inject(Complex[Double](x))
-            def log(n: Comp): Comp = n.map(n => n.log)
-            def sin(n: Comp): Comp = n.map(n => n.sin)
-            def asin(n: Comp): Comp = n.map(n => n.asin)
-            def cos(n: Comp): Comp = n.map(n => n.cos)
-            def acos(n: Comp): Comp = n.map(n => n.acos)
-            def tan(n: Comp): Comp = n.map(n => n.tan)
-            def atan(n: Comp): Comp = n.map(n => n.atan)
-            def sqrt(n: Comp): Comp = n.map(n => n.sqrt)
-            def plus(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 + n2)))
-            def minus(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 - n2)))
-            def times(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 * n2)))
-            def div(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 / n2)))
-            def expt(n1: Comp, n2: Comp): Comp = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1.pow(n2))))
+        implicit val compConcrete: NumberLattice[N] = new BaseInstance[Complex[Double]]("Complex") with NumberLattice[N] {
+            def inject(x: Complex[Double]): N = makeValues(Set(x))
+            def inject(x: BigInt): N = inject(Complex[Double](x))
+            def inject(x: Double): N = inject(Complex[Double](x))
+
+            case object Real extends L[Nothing]
+            case object Integer extends L[Nothing]
+
+            val real = Real
+            val integer = Integer
+
+            override def modulo(n1: N, n2: N): N = ???
+            override def quotient(n1: N, n2: N): N = ???
+            override def remainder(n1: N, n2: N): N = ???
+            override def lt[B: BoolLattice](n1: N, n2: N): B = ???
+            override def isComplex[B: BoolLattice](n: N): B = ???
+            override def isInteger[B: BoolLattice](n: N): B = ???
+            override def ceiling(n: N): N = ???
+            override def toString[S: StringLattice](n: N): S = ???
+            override def floor(n: N): N = ???
+            override def round(n: N): N = ???
+            override def isReal[B: BoolLattice](n: N): B = ??? 
+            
+            def log(n: N): N = n.map(n => n.log)
+            def sin(n: N): N = n.map(n => n.sin)
+            def asin(n: N): N = n.map(n => n.asin)
+            def cos(n: N): N = n.map(n => n.cos)
+            def acos(n: N): N = n.map(n => n.acos)
+            def tan(n: N): N = n.map(n => n.tan)
+            def atan(n: N): N = n.map(n => n.atan)
+            def sqrt(n: N): N = n.map(n => n.sqrt)
+            def plus(n1: N, n2: N): N = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 + n2)))
+            def minus(n1: N, n2: N): N = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 - n2)))
+            def times(n1: N, n2: N): N = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 * n2)))
+            def div(n1: N, n2: N): N = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1 / n2)))
+            def expt(n1: N, n2: N): N = n2.guardBot(n1.foldMap(n1 => n2.map(n2 => n1.pow(n2))))
         }
 
         implicit val charConcrete: CharLattice[C] = new BaseInstance[Char]("Char") with CharLattice[C] {
@@ -269,7 +288,7 @@ class ConcreteLattice:
             def downCase(c: C): C = c.map(_.toLower)
             def upCase(c: C): C = c.map(_.toUpper)
             def toString[S2: StringLattice](c: C): S2 = c.foldMap(char => StringLattice[S2].inject(char.toString))
-            def toInt[I2: IntLattice](c: C) = c.foldMap(c => IntLattice[I2].inject(c.toInt))
+            def toInt[N2: NumberLattice](c: C) = c.foldMap(c => NumberLattice[N2].inject(c.toInt))
 
             def isLower[B2: BoolLattice](c: C): B2 = c.foldMap(char => BoolLattice[B2].inject(char.isLower))
             def isUpper[B2: BoolLattice](c: C): B2 = c.foldMap(char => BoolLattice[B2].inject(char.isUpper))

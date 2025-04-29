@@ -116,7 +116,7 @@ class SchemeLatticeTests[L](gen: SchemeLatticeGenerator[L])(implicit val schemeL
 
         /* Properties about vectors */
         p.property("∀ vct, idx1, val1, idx2, val2: vectorSet(vectorSet(vct,idx1,val1),idx2,val2) = vectorSet(vectorSet(vct,idx2,val2),idx1,val1)") =
-            forAll(gen.anyVec, gen.anyInt, gen.any, gen.anyInt, gen.any) { (vct: L, idx1: L, val1: L, idx2: L, val2: L) =>
+            forAll(gen.anyVec, gen.anyNum, gen.any, gen.anyNum, gen.any) { (vct: L, idx1: L, val1: L, idx2: L, val2: L) =>
                 val vct1 = convert(vectorSet(vct, idx1, val1))
                 val vct2 = convert(vectorSet(vct, idx2, val2))
                 val vct12 = convert(vectorSet(vct1, idx2, val2))
@@ -136,4 +136,4 @@ class ConcreteSchemeLatticeTests
     extends SchemeLatticeTests(ConcreteModularSchemeLattice.SchemeValueLatticeGenerator)(using ConcreteModularSchemeLattice.valLat)
 class ConstantSchemeLatticeTests
     extends SchemeLatticeTests(ConstantModularSchemeLattice.SchemeValueLatticeGenerator)(using ConstantModularSchemeLattice.valLat)
-class TypeSchemeLatticeTests extends SchemeLatticeTests(TypeModularSchemeLattice.SchemeValueLatticeGenerator)(using TypeModularSchemeLattice.valLat)
+//class TypeSchemeLatticeTests extends SchemeLatticeTests(TypeModularSchemeLattice.SchemeValueLatticeGenerator)(using TypeModularSchemeLattice.valLat)

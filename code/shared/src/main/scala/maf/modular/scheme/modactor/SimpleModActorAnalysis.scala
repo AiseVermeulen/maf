@@ -23,15 +23,13 @@ import maf.language.racket.RacketLoaderSemantics
 trait ASchemeConstantPropagationDomain extends SchemeDomain:
     type S = ConstantPropagation.S
     type B = ConstantPropagation.B
-    type I = ConstantPropagation.I
-    type R = ConstantPropagation.R
     type C = ConstantPropagation.C
     type Sym = ConstantPropagation.Sym
-    type Comp = ConstantPropagation.Comp
+    type N = ConstantPropagation.N
     type Value = HMap
 
-    implicit override lazy val lattice: ASchemeModularLattice[Address, S, B, I, R, C, Sym, Comp] =
-        new ASchemeModularLattice[Address, S, B, I, R, C, Sym, Comp]()
+    implicit override lazy val lattice: ASchemeModularLattice[Address, S, B, C, Sym, N] =
+        new ASchemeModularLattice[Address, S, B, C, Sym, N]()
 
     final lazy val primitives = new SchemeLatticePrimitives()(lattice)
 

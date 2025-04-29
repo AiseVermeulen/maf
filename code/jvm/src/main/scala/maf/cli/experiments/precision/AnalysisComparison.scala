@@ -9,8 +9,8 @@ import maf.util.benchmarks.*
 
 import scala.concurrent.duration.*
 
-abstract class AnalysisComparison[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Complex: NumberLattice]
-    extends PrecisionBenchmarks[Num, Rea, Bln, Chr, Str, Smb, Complex]:
+abstract class AnalysisComparison[Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Num: NumberLattice]
+    extends PrecisionBenchmarks[Bln, Chr, Str, Smb, Num]:
 
     // the precision comparison is parameterized by:
     // - the base analysis (= lowest precision) to compare to
@@ -56,13 +56,11 @@ abstract class AnalysisComparison[Num: IntLattice, Rea: RealLattice, Bln: BoolLa
 
 object AnalysisComparison1
     extends AnalysisComparison[
-      ConstantPropagation.I,
-      ConstantPropagation.R,
       ConstantPropagation.B,
       ConstantPropagation.C,
       ConstantPropagation.S,
       ConstantPropagation.Sym,
-      ConstantPropagation.Comp
+      ConstantPropagation.N
     ]:
     val k = 0
     val l = 1000

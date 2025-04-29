@@ -1,23 +1,23 @@
 package maf.cli.experiments.precision
 
-import maf.core._
-import maf.language.scheme._
+import maf.core.*
+import maf.language.scheme.*
 import maf.language.scheme.interpreter.{ConcreteValues, FileIO, IO, SchemeInterpreter}
-import maf.language.scheme.lattices.ModularSchemeLattice
-import maf.language.scheme.primitives._
-import maf.lattice.interfaces._
-import maf.modular._
-import maf.modular.scheme._
-import maf.util._
+import maf.language.scheme.lattices.{E, ModularNumberLattice, ModularSchemeLattice}
+import maf.language.scheme.primitives.*
+import maf.lattice.interfaces.*
+import maf.modular.*
+import maf.modular.scheme.*
+import maf.util.*
 import maf.util.benchmarks.Timeout
 import maf.language.scheme.interpreter.EmptyIO
 
-abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Complex: NumberLattice]:
+abstract class PrecisionBenchmarks[Bln: BoolLattice, Chr: CharLattice, Str: StringLattice, Smb: SymbolLattice, Num: NumberLattice]:
 
     type Benchmark = String
     type Analysis = AnalysisEntry[SchemeExp] with AnalysisResults[SchemeExp] with ModularSchemeDomain {
         val modularLatticeWrapper: ModularSchemeLatticeWrapper {
-            val modularLattice: ModularSchemeLattice[Address, Str, Bln, Num, Rea, Chr, Smb, Complex]
+            val modularLattice: ModularSchemeLattice[Address, Str, Bln, Chr, Smb, Num]
         }
     }
 
@@ -33,7 +33,7 @@ abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolL
         case maf.modular.scheme.PtrAddr(exp, _) => PtrAddr(exp)
         case maf.modular.scheme.PrmAddr(nam)    => PrmAddr(nam)
 
-    val baseDomain = new ModularSchemeLattice[BaseAddr, Str, Bln, Num, Rea, Chr, Smb, Complex]
+    val baseDomain = new ModularSchemeLattice[BaseAddr, Str, Bln, Chr, Smb, Num]
     val baseLattice = baseDomain.schemeLattice
     type BaseValue = baseDomain.L
 
@@ -41,9 +41,7 @@ abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolL
     protected def convertV(analysis: Analysis)(value: analysis.modularLatticeWrapper.modularLattice.Value): baseDomain.Value = value match
         case analysis.modularLatticeWrapper.modularLattice.Nil          => baseDomain.Nil
         case analysis.modularLatticeWrapper.modularLattice.Bool(b)      => baseDomain.Bool(b)
-        //case analysis.modularLatticeWrapper.modularLattice.Int(i)       => baseDomain.Int(i)
         case analysis.modularLatticeWrapper.modularLattice.Numb(r)      => baseDomain.Numb(r)
-        //case analysis.modularLatticeWrapper.modularLattice.Real(r)      => baseDomain.Real(r)
         case analysis.modularLatticeWrapper.modularLattice.Char(c)      => baseDomain.Char(c)
         case analysis.modularLatticeWrapper.modularLattice.Str(s)       => baseDomain.Str(s)
         case analysis.modularLatticeWrapper.modularLattice.Symbol(s)    => baseDomain.Symbol(s)
@@ -81,17 +79,17 @@ abstract class PrecisionBenchmarks[Num: IntLattice, Rea: RealLattice, Bln: BoolL
         case ConcreteValues.Value.Pointer(a)   => baseLattice.pointer(convertConcreteAddr(a))
         case ConcreteValues.Value.Vector(siz, els, _) =>
             def convertNumber(n: BigInt): Num = baseLattice.number(n) match
-                case baseDomain.Elements(vs) => vs.head.asInstanceOf[baseDomain.Numb].n._2._1
+                case baseDomain.Elements(vs) => vs.head.asInstanceOf[baseDomain.Numb].n._2
 
             val cSiz = convertNumber(siz)
-            val cEls = els.foldLeft(Map[Num, BaseValue]()) { case (acc, (idx, vlu)) =>
+            val cEls = els.foldLeft(Map[(E, Num), BaseValue]()) { case (acc, (idx, vlu)) =>
                 val cIdx = convertNumber(idx)
                 val cVlu = convertConcreteValue(vlu)
-                val prevVlu = acc.getOrElse(cIdx, baseLattice.bottom)
+                val prevVlu = acc.getOrElse(ModularNumberLattice[Num].inject(cIdx), baseLattice.bottom)
                 val newVlu = baseLattice.join(cVlu, prevVlu)
-                acc + (cIdx -> newVlu)
+                acc + (ModularNumberLattice[Num].inject(cIdx) -> newVlu)
             }
-            baseDomain.Element(baseDomain.Vec(cSiz, cEls))
+            baseDomain.Element(baseDomain.Vec(ModularNumberLattice[Num].inject(cSiz), cEls))
         case v => throw new Exception(s"Unsupported value for concrete conversion: $v")
 
     // compares the results of concrete and/or abstract interpreters using a `ResultMap`

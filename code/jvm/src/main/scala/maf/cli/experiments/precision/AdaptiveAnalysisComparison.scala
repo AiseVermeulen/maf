@@ -10,14 +10,12 @@ import maf.util.benchmarks.*
 import scala.concurrent.duration.*
 
 abstract class AdaptiveAnalysisComparison[
-    Num: IntLattice,
-    Rea: RealLattice,
     Bln: BoolLattice,
     Chr: CharLattice,
     Str: StringLattice,
     Smb: SymbolLattice, 
-    Complex: NumberLattice]
-    extends PrecisionBenchmarks[Num, Rea, Bln, Chr, Str, Smb, Complex]:
+    Num: NumberLattice]
+    extends PrecisionBenchmarks[Bln, Chr, Str, Smb, Num]:
 
     // the precision comparison is parameterized by:
     // - a timeout and number of concrete runs
