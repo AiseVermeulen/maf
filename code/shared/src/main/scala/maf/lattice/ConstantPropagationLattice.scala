@@ -71,7 +71,6 @@ object ConstantPropagation:
     type C = L[Char]
     type Sym = L[String]
     type N = L[Complex[Double]]
-
     object L:
         implicit val boolCP: BoolLattice[B] = new BaseInstance[Boolean]("Bool") with BoolLattice[B] {
             def inject(b: Boolean): B = Constant(b)
@@ -324,61 +323,65 @@ object ConstantPropagation:
                 case Bottom      => StringLattice[S2].bottom
         }
 
-        implicit val complexCP: NumberLattice[N] = new BaseInstance[Complex[Double]]("Complex") with NumberLattice[N] {
+        implicit val numberCP: NumberLattice[N] = new BaseInstance[Complex[Double]]("Number") with NumberLattice[N] {
 
             def inject(x: Complex[Double]) = Constant(x)
             def inject(x: BigInt) = inject(Complex[Double](x))
             def inject(x: Double) = inject(Complex[Double](x))
-            
-            case object Real extends L[Nothing]
-            case object Integer extends L[Nothing]
-            
-            val real = Real
-            val integer = Integer
 
-            def isInteger(n: Complex[Double]): Boolean =
+            case object Integer extends L[Nothing]
+            case object Real extends L[Nothing]
+            case object ExclReal extends L[Nothing]
+            case object ExclComplex extends L[Nothing]
+
+            val integer = Integer
+            val real = Real
+            val exclReal = ExclReal
+            val exclComplex = ExclComplex
+
+            private def isConstantInteger(n: Complex[Double]): Boolean =
                 n.isReal && (scala.math.round(n.real) == n.real)
 
             def isInteger[B2: BoolLattice](n: N): B2 =
                 n match
-                    case Constant(x) => BoolLattice[B2].inject(isInteger(x))
+                    case Constant(x) => BoolLattice[B2].inject(isConstantInteger(x))
                     case Bottom => BoolLattice[B2].bottom
                     case Integer => BoolLattice[B2].inject(true)
-                    case _ => BoolLattice[B2].top ///???????
+                    case _ => BoolLattice[B2].top
 
-            def isReal(n: Complex[Double]): Boolean =
+            private def isConstantReal(n: Complex[Double]): Boolean =
                 n.isReal && (scala.math.round(n.real) != n.real)
 
-            override def isReal[B2: BoolLattice](n: N): B2 =
+            def isReal[B2: BoolLattice](n: N): B2 =
                 n match
-                    case Constant(x) => BoolLattice[B2].inject(isReal(x))
+                    case Constant(x) => BoolLattice[B2].inject(isConstantReal(x))
                     case Bottom => BoolLattice[B2].bottom
                     case Real => BoolLattice[B2].inject(true)
                     case Integer => BoolLattice[B2].inject(true)
-                    case _ => BoolLattice[B2].top ///???????
+                    case _ => BoolLattice[B2].top
 
-            def isComplex(n: Complex[Double]): Boolean =
+            def isConstantComplex(n: Complex[Double]): Boolean =
                 n.imag != 0
 
             override def isComplex[B2: BoolLattice](n: N): B2 =
                 n match
                     case Bottom => BoolLattice[B2].bottom
-                    case _ => BoolLattice[B2].inject(true) // ????
+                    case _ => BoolLattice[B2].inject(true)
 
             override def subsumes(x: N, y: => N): Boolean = x match
                 case Top => true
                 case Real => y match
-                    case Constant(z) => !isComplex(z)
+                    case Constant(z) => !isConstantComplex(z)
                     case Top => false
                     case _ => true
                 case Integer => y match
-                    case Constant(z) => isInteger(z)
+                    case Constant(z) => isConstantInteger(z)
                     case Integer => true
                     case Bottom => true
                     case _ => false
-                case Constant(_) =>
+                case Constant(a) =>
                     y match
-                        case Constant(_) => x == y
+                        case Constant(b) => a == b
                         case Bottom => true
                         case _ => false
                 case Bottom =>
@@ -394,21 +397,21 @@ object ConstantPropagation:
                     case (_, Bottom) => x
                     case (Constant(a), Constant(b)) =>
                         if a == b then x
-                        else if isComplex(a) || isComplex(b) then Top
-                        else if isReal(a) || isReal(b) then Real
+                        else if isConstantComplex(a) || isConstantComplex(b) then Top
+                        else if isConstantReal(a) || isConstantReal(b) then Real
                         else Integer
                     case (Constant(a), _) =>
-                        if isComplex(a) then Top
+                        if isConstantComplex(a) then Top
                         else
                             y match
                                 case Real => Real
-                                case Integer => if isInteger(a) then Integer else Real
+                                case Integer => if isConstantInteger(a) then Integer else Real
                     case (_, Constant(a)) =>
-                        if isComplex(a) then Top
+                        if isConstantComplex(a) then Top
                         else
                             x match
                                 case Real => Real
-                                case Integer => if isInteger(a) then Integer else Real
+                                case Integer => if isConstantInteger(a) then Integer else Real
                     case (Real, _) => Real
                     case (_, Real) => Real
                     case (Integer, Integer) => Integer
@@ -418,7 +421,7 @@ object ConstantPropagation:
                     case Integer => Integer
                     case Real => Integer
                     case Top => Top // klopt dit wel, aangezien er Complexe getallen bij zijn die niet afgerond kunnen worden
-                    case Constant(x) => if !isComplex(x) then Constant(Complex[Double](f(x.real)))
+                    case Constant(x) => if !isConstantComplex(x) then Constant(Complex[Double](f(x.real)))
                                         else Top
                     case _ => Bottom
 
@@ -438,14 +441,9 @@ object ConstantPropagation:
                 case _ => n
 
             def asin(n: N): N = n match
-                case Constant(x) => if isComplex(x)
-                                        then Constant(x.asin)
-                                    else if  -1 <= x.real && x.real <= 1 then
-                                        Constant(x.asin)
-                                    else
-                                        Bottom
-                case Integer => Real
-                case _ => n
+                case Constant(x) => Constant(x.asin)
+                case Bottom => Bottom
+                case _ => Top
 
             def cos(n: N): N = n match
                 case Constant(x) => Constant(x.cos)
@@ -453,16 +451,9 @@ object ConstantPropagation:
                 case _ => n
 
             def acos(n: N): N = n match
-                case Constant(x) => {
-                    if isComplex(x) then
-                        Constant(x.acos)
-                    else if -1 <= x.real && x.real <= 1 then
-                        Constant(x.acos)
-                    else
-                        Bottom
-                }
-                case Integer => Real
-                case _ => n
+                case Constant(x) => Constant(MathOps.acos(x))
+                case Bottom => Bottom
+                case _ => Top
 
             def tan(n: N): N = n match
                 case Constant(x) => Constant(x.tan)
@@ -474,11 +465,10 @@ object ConstantPropagation:
                 case Integer => Real
                 case _ => n
 
-            def sqrt(n: N): N = n match 
+            def sqrt(n: N): N = n match
                 case Constant(x) => Constant(x.sqrt)
-                case Real => Top
-                case Integer => Top
-                case _ => n
+                case Bottom => Bottom
+                case _ => Top
 
             private def binop1(
                                  op: (Complex[Double], Complex[Double]) => Complex[Double],
@@ -489,10 +479,10 @@ object ConstantPropagation:
                 case (_, Bottom) => Bottom
                 case (Top, _) => Top
                 case (_, Top) => Top
-                case (Real, Constant(x)) => if isComplex(x) then Top else Real
-                case (Constant(x), Real) => if isComplex(x) then Top else Real
-                case (Integer, Constant(x)) => if isInteger(x) then Integer else if isReal(x) then Real else Top
-                case (Constant(x), Integer) => if isInteger(x) then Integer else if isReal(x) then Real else Top
+                case (Real, Constant(x)) => if isConstantComplex(x) then Top else Real
+                case (Constant(x), Real) => if isConstantComplex(x) then Top else Real
+                case (Integer, Constant(x)) => if isConstantInteger(x) then Integer else if isConstantReal(x) then Real else Top
+                case (Constant(x), Integer) => if isConstantInteger(x) then Integer else if isConstantReal(x) then Real else Top
                 case (Constant(x), Constant(y)) => Constant(op(x, y))
                 case (Real, _) => Real
                 case (_, Real) => Real
@@ -512,17 +502,17 @@ object ConstantPropagation:
                 case (Top, _) => Top
                 case (_, Top) => Top
                 case (Constant(x), Constant(y)) => Constant(op(x, y))
-                case (Constant(x), _) => if isComplex(x) then Top else Real
-                case (_, Constant(x)) => if isComplex(x) then Top else Real
+                case (Constant(x), _) => if isConstantComplex(x) then Top else Real
+                case (_, Constant(x)) => if isConstantComplex(x) then Top else Real
                 case _ => Real
 
             def div(n1: N, n2: N): N = binop2(_ / _, n1, n2)
             def expt(n1: N, n2: N): N = binop1((x, y) => x.pow(y), n1, n2)
 
             def log(n: N): N = n match
-                case Constant(x) => Constant(x.log)
-                case Top => Top
-                case _ => n
+                case Constant(x) => if x == 0 then Bottom else Constant(x.log)
+                case Bottom => Bottom
+                case _ => Top
 
             def toString[S2: StringLattice](n: N): S2 = n match
                 case Top => StringLattice[S2].top
@@ -532,7 +522,7 @@ object ConstantPropagation:
             def lt[B2: BoolLattice](n1: N, n2: N): B2 =
                 (n1, n2) match
                     case (Constant(x), Constant(y)) => {
-                        if isComplex(x) || isComplex(y) then
+                        if isConstantComplex(x) || isConstantComplex(y) then
                             BoolLattice[B2].bottom
                         else
                             BoolLattice[B2].inject(x.real < y.real)
@@ -541,15 +531,15 @@ object ConstantPropagation:
                     case (_, Top) => BoolLattice[B2].bottom
                     case (Bottom, _) => BoolLattice[B2].bottom
                     case (_, Bottom) => BoolLattice[B2].bottom
-                    case (Constant(x), _) => if isComplex(x) then BoolLattice[B2].bottom else BoolLattice[B2].top
-                    case (_, Constant(x)) => if isComplex(x) then BoolLattice[B2].bottom else BoolLattice[B2].top
+                    case (Constant(x), _) => if isConstantComplex(x) then BoolLattice[B2].bottom else BoolLattice[B2].top
+                    case (_, Constant(x)) => if isConstantComplex(x) then BoolLattice[B2].bottom else BoolLattice[B2].top
                     case _ => BoolLattice[B2].top
 
             def RMQ(n1: N, n2: N, f: (Double, Double) => Double): N =
                 (n1, n2) match
-                    case (Constant(x), Constant(y)) => if isInteger(x) && isInteger(y) then Constant(Complex[Double](f(x.real, y.real))) else Bottom
-                    case (Constant(x), Integer) => if isInteger(x) then Integer else Bottom
-                    case (Integer, Constant(x)) => if isInteger(x) then Integer else Bottom
+                    case (Constant(x), Constant(y)) => if isConstantInteger(x) && isConstantInteger(y) then Constant(Complex[Double](f(x.real, y.real))) else Bottom
+                    case (Constant(x), Integer) => if isConstantInteger(x) then Integer else Bottom
+                    case (Integer, Constant(x)) => if isConstantInteger(x) then Integer else Bottom
                     case (Integer, Integer) => Integer
                     case _ => Bottom
 
@@ -557,8 +547,42 @@ object ConstantPropagation:
             def modulo(n1: N, n2: N): N = RMQ(n1, n2, (x, y) => MathOps.modulo(x.toBigInt, y.toBigInt).toDouble)
             def quotient(n1: N, n2: N): N = RMQ(n1, n2, (x, y) => scala.math.floorDiv(x.toInt, y.toInt).toDouble)
 
+            override def imagPart(n: N): N =
+                n match
+                    case Constant(x) => Constant(x.imag)
+                    case Top => Real
+                    case Bottom => Bottom
+                    case _ => Constant(Complex[Double](0))
+
+            override def realPart(n: N): N =
+                n match
+                    case Constant(x) => Constant(x.real)
+                    case Top => Real
+                    case Bottom => Bottom
+                    case Integer => Integer
+                    case Real => Real
+
+            def toChar[C2: CharLattice](n: N): C2 = n match
+                case Top         => CharLattice[C2].top
+                case Constant(x) => 
+                    if isConstantInteger(x) then
+                        CharLattice[C2].inject(x.real.toInt.asInstanceOf[Char])
+                    else 
+                        CharLattice[C2].bottom
+                case Bottom      => CharLattice[C2].bottom
+
+            def makeString[C2: CharLattice, S2: StringLattice](length: N, char: C2): S2 = (length, char) match
+                case (Bottom, _)                               => StringLattice[S2].bottom
+                case (_, bot) if bot == CharLattice[C2].bottom => StringLattice[S2].bottom
+                case (Top, _)                                  => StringLattice[S2].top
+                case (Constant(n), _) =>
+                    val c = CharLattice[C2].toString[S2](char)
+                    1.to(n.real.toInt).foldLeft(StringLattice[S2].inject(""))((s, _) => StringLattice[S2].append(s, c))
+                case _ => StringLattice[S2].bottom    
+
         }
 
+       
         implicit val charCP: CharLattice[C] = new BaseInstance[Char]("Char") with CharLattice[C] {
             def inject(x: Char) = Constant(x)
             def downCase(c: C): C = c match

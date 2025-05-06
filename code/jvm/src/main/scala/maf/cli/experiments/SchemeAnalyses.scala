@@ -59,6 +59,12 @@ object SchemeAnalyses:
         override def toString = "no-sensitivity"
     }
 
+    def contextInsensitiveAnalysisV2(
+        prg: SchemeExp
+      ) = new SimpleSchemeModFAnalysis(prg) with SchemeModFNoSensitivity with SchemeConstantPropagationDomainV2 with FIFOWorklistAlgorithm[SchemeExp] {
+        override def toString = "no-sensitivity"
+    }
+
     //def contextInsensitiveAnalysisRacket(
     //    prg: SchemeExp
     //  ) = new SimpleSchemeModFAnalysis(prg)

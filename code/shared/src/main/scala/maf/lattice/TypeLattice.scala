@@ -142,8 +142,12 @@ object Type:
 
             case object Real extends T
             case object Integer extends T
+            case object ExclReal extends T
+            case object ExclComplex extends T
             val real = Real
             val integer = Integer
+            val exclReal = ExclReal
+            val exclComplex = ExclComplex
             
             def log(n: T): T = n
             def random(n: T): T = n
@@ -172,6 +176,11 @@ object Type:
                 case (Top, Top) => BoolLattice[B2].top
                 case _ => BoolLattice[B2].bottom
             def toString[S2: StringLattice](n: T): S2 = n.to[S2]
+
+            override def imagPart(n: N): N = ???
+            override def toChar[C: CharLattice](n: N): C = ???
+            override def realPart(n: N): N = ???
+            override def makeString[C: CharLattice, S: StringLattice](length: N, char: C): S = ???
         }
         implicit val typeIsChar: CharLattice[C] = new BaseInstance("Char") with CharLattice[C] {
             def inject(c: Char): T = Top

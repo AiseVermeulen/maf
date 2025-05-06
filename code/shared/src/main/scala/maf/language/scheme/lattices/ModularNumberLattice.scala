@@ -1,12 +1,14 @@
 package maf.language.scheme.lattices
 
-import maf.lattice.interfaces.{BoolLattice, IntLattice, NumberLattice, RealLattice, StringLattice}
+import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, NumberLattice, RealLattice, StringLattice}
 import spire.math.Complex
 
 class ModularNumberLattice[N: NumberLattice] extends NumberLattice[(E, N)]{
 
     val real = (ExactLattice.top, NumberLattice[N].real)
     val integer = (ExactLattice.top, NumberLattice[N].integer)
+    val exclReal = (ExactLattice.top, NumberLattice[N].exclReal)
+    val exclComplex = (ExactLattice.top, NumberLattice[N].exclComplex)
 
     override def show(v: (E, N)): String = 
         "(" + ExactLattice.show(v._1) + ", " + NumberLattice[N].show(v._2) + ")"
@@ -106,5 +108,16 @@ class ModularNumberLattice[N: NumberLattice] extends NumberLattice[(E, N)]{
 
     def remainder(n1: (E, N), n2: (E, N)): (E, N) =
         (ExactLattice.remainder(n1._1, n2._1), NumberLattice[N].remainder(n1._2, n2._2))
+
+    def isExact[B: BoolLattice](n: (E, N)): B = ExactLattice.isExact[B](n._1)
+    def isInexact[B: BoolLattice](n: (E, N)): B = ExactLattice.isInexact[B](n._1)
+
+    override def toChar[C: CharLattice](n: (E, N)): C = NumberLattice[N].toChar[C](n._2)
+
+    override def imagPart(n: (E, N)): (E, N) = (n._1, NumberLattice[N].imagPart(n._2))
+    override def realPart(n: (E, N)): (E, N) = (n._1, NumberLattice[N].realPart(n._2))
+
+    override def makeString[C: CharLattice, S: StringLattice](length: (E, N), char: C): S = NumberLattice[N].makeString[C, S](length._2, char)
+    
   
 }

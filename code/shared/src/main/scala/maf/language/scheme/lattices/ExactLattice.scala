@@ -33,6 +33,12 @@ object ExactLattice extends Lattice[E]{
             case Bottom => BoolLattice[B].bottom
             case _ => BoolLattice[B].inject(e == Exact)
 
+    def isInexact[B: BoolLattice](e: E): B =
+        e match
+            case Top => BoolLattice[B].top
+            case Bottom => BoolLattice[B].bottom
+            case _ => BoolLattice[B].inject(e == Inexact)        
+
     def eql[B: BoolLattice](x: E, y: E): B = BoolLattice[B].inject(x == y)
                     
 
@@ -81,11 +87,8 @@ object ExactLattice extends Lattice[E]{
         contaminate(n1, n2)
 
     def quotient(n1: E, n2: E): E =
-        contaminate(n1, n2)    
-    def sqrt(n: E): E =
-        n match
-            case Inexact => Inexact
-            case _ => Top
+        contaminate(n1, n2)
+
 
     def exactToInexact(n: E): E = Inexact
     def inexactToExact(n: E): E = Exact
@@ -105,6 +108,7 @@ object ExactLattice extends Lattice[E]{
     def sin(n: E): E = singularOp(n)
     def tan(n: E): E = singularOp(n)
     def log(n: E): E = singularOp(n)
+    def sqrt(n: E): E = singularOp(n)
     def modulo(n1: E, n2: E): E = contaminate(n1, n2)
     def div(n1: E, n2: E): E = Top /// nog aanpassen
     def remainder(n1: E, n2: E): E = contaminate(n1, n2)

@@ -83,6 +83,8 @@ object SchemeOp:
     case object MakeInputPort extends SchemeOp1("make-input-port")
     case object MakeOutputPort extends SchemeOp1("make-input-port")
     case object IsNumber extends SchemeOp1("number?")
+    case object RealPart extends SchemeOp1("real-part")
+    case object ImagPart extends SchemeOp1("imag-part")
 
     val unaryOperators: Iterable[SchemeOp1] = Set(
       Car,
@@ -137,7 +139,9 @@ object SchemeOp:
       CharacterIsLower,
       CharacterIsUpper,
       MakeInputPort,
-      MakeOutputPort,
+      MakeOutputPort, 
+      RealPart,
+      ImagPart
     )
 
     sealed trait SchemeOp2(val name: String) extends SchemeOp:

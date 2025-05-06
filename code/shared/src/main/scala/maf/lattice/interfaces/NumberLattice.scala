@@ -7,6 +7,9 @@ trait NumberLattice[N] extends Lattice[N] {
     self =>
     def integer: N
     def real: N
+
+    def exclReal: N
+    def exclComplex: N
     
     def inject(n: Double): N
     def inject(n: BigInt): N
@@ -15,6 +18,9 @@ trait NumberLattice[N] extends Lattice[N] {
     def isInteger[B: BoolLattice](n: N) : B
     def isReal[B: BoolLattice](n: N) : B
     def isComplex[B: BoolLattice](n: N) : B
+    
+    //def isExact[B: BoolLattice](n: N) : B
+    //def isInexact[B: BoolLattice](n: N) : B
     
     def ceiling(n: N): N
     def floor(n: N): N
@@ -39,10 +45,12 @@ trait NumberLattice[N] extends Lattice[N] {
     def lt[B: BoolLattice](n1: N, n2: N): B //Less than
     def toString[S: StringLattice](n: N): S
     //def valuesBetween(n1: N, n2: N): Set[N]
-    //def makeString[C: CharLattice, S: StringLattice](length: N, char: C): S
-    //def toChar[C: CharLattice](n: N): C
+    def makeString[C: CharLattice, S: StringLattice](length: N, char: C): S
+    def toChar[C: CharLattice](n: N): C
     //def exactToInexact(n: N): N
     //def inexactToExact(n: N): N
+    def realPart(n: N): N
+    def imagPart(n: N): N
 
 }
 

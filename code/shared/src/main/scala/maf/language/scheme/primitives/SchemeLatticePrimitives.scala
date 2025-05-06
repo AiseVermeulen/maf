@@ -126,6 +126,8 @@ class SchemeLatticePrimitives[V, A <: Address](implicit override val schemeLatti
             `vector?`,
             `<`,
             `=`,
+            `real-part`,
+            `imag-part`,
             /* IO primitives */
             `input-port?`,
             `output-port?`,
@@ -244,6 +246,7 @@ class SchemeLatticePrimitives[V, A <: Address](implicit override val schemeLatti
         case object `null?` extends SchemePrimOp1("null?", SchemeOp.IsNull)
         case object `number?` extends SchemePrimOp1("number?", SchemeOp.IsNumber)
         case object `real?` extends SchemePrimOp1("real?", SchemeOp.IsReal)
+        case object `complex?` extends SchemePrimOp1("complex?", SchemeOp.IsComplex)
         /* No support for complex number, so number? is equivalent as real? */
         case object `procedure?` extends SchemePrimOp1("procedure?", SchemeOp.IsProcedure)
         case object `quotient` extends SchemePrimOp2("quotient", SchemeOp.Quotient)
@@ -256,6 +259,8 @@ class SchemeLatticePrimitives[V, A <: Address](implicit override val schemeLatti
         case object `bool-top` extends SchemePrim0("bool-top"):
             override def call[M[_]: PrimM](fpos: SchemeExp): M[V] =
                 PrimM[M].unit(schemeLattice.boolTop)
+        case object `real-part` extends SchemePrimOp1("real-part", SchemeOp.RealPart)
+        case object `imag-part` extends SchemePrimOp1("imag-part", SchemeOp.ImagPart)
 
         case object SchemePlus extends SchemePrimVarArg("+"):
             def call[M[_]: PrimM](fpos: SchemeExp, vs: List[V]): M[V] = call(vs)

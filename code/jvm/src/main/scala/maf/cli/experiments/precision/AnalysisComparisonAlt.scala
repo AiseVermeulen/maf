@@ -83,41 +83,46 @@ object AnalysisComparisonAlt1
     //lazy val adaptive: List[(SchemeExp => Analysis, String)] = ls.map { l =>
     //    (SchemeAnalyses.modflocalAnalysisAdaptiveA(_, k, l), s"$k-CFA DSS w/ ASW (l = $l)")
     //}
-    def analyses = modf :: dss :: Nil
+    def analyses =  List((SchemeAnalyses.contextInsensitiveAnalysis(_), "Versie 1"))
+    //def analyses =  List((SchemeAnalyses.contextInsensitiveAnalysisV2(_), "Versie 2"))
     def main(args: Array[String]) = runBenchmarks(
       Set(
-        //"test/R5RS/various/collatz.scm",
-        //"test/R5RS/various/mceval.scm",
-        //"test/R5RS/various/church.scm",
-        //"test/R5RS/various/regex.scm",
-        //"test/R5RS/various/blur.scm",
-        //"test/R5RS/various/bound-precision.scm",
-        //"test/R5RS/various/eta.scm",
-        //"test/R5RS/various/gcipd.scm",
-        //"test/R5RS/various/four-in-a-row.scm",
-        //"test/R5RS/various/grid.scm",
-        //"test/R5RS/various/mj09.scm",
-        //"test/R5RS/various/primtest.scm",
-        //"test/R5RS/various/rsa.scm",
-        //"test/R5RS/gambit/deriv.scm",
-        //"test/R5RS/gambit/tak.scm",
-        //"test/R5RS/gambit/browse.scm",
-        //"test/R5RS/gambit/earley.scm",
-        //"test/R5RS/gambit/matrix.scm",
-        //"test/R5RS/gambit/mazefun.scm",
-        //"test/R5RS/gambit/nqueens.scm",
-        //"test/R5RS/gambit/peval.scm",
-        //"test/R5RS/scp1/flatten.scm",
+          "test/R5RS/test.scm"
+        /*
+        "test/R5RS/various/collatz.scm",
+        "test/R5RS/various/mceval.scm",
+        "test/R5RS/various/church.scm",
+        "test/R5RS/various/regex.scm",
+        "test/R5RS/various/blur.scm",
+        "test/R5RS/various/bound-precision.scm",
+        "test/R5RS/various/eta.scm",
+        "test/R5RS/various/gcipd.scm",
+        "test/R5RS/various/four-in-a-row.scm",
+        "test/R5RS/various/grid.scm",
+        "test/R5RS/various/mj09.scm",
+        "test/R5RS/various/primtest.scm",
+        "test/R5RS/various/rsa.scm",
+        "test/R5RS/gambit/deriv.scm",
+        "test/R5RS/gambit/tak.scm",
+        "test/R5RS/gambit/browse.scm",
+        "test/R5RS/gambit/earley.scm",
+        "test/R5RS/gambit/matrix.scm",
+        "test/R5RS/gambit/mazefun.scm",
+        "test/R5RS/gambit/nqueens.scm",
+        "test/R5RS/gambit/peval.scm",
+        "test/R5RS/scp1/flatten.scm",
         //"test/R5RS/icp/icp_1c_multiple-dwelling.scm",
-        //"test/R5RS/icp/icp_1c_ontleed.scm",
-        //"test/R5RS/icp/icp_1c_prime-sum-pair.scm",
-        //"test/R5RS/icp/icp_2_aeval.scm",
-        //"test/R5RS/icp/icp_3_leval.scm",
-        //"test/R5RS/icp/icp_5_regsim.scm",
-        //"test/R5RS/icp/icp_7_eceval.scm",
-        //"test/R5RS/icp/icp_8_compiler.scm",
-        //"test/R5RS/various/lambda-update.scm",
+        "test/R5RS/icp/icp_1c_ontleed.scm",
+        "test/R5RS/icp/icp_1c_prime-sum-pair.scm",
+        "test/R5RS/icp/icp_2_aeval.scm",
+        "test/R5RS/icp/icp_3_leval.scm",
+        "test/R5RS/icp/icp_5_regsim.scm",
+        "test/R5RS/icp/icp_7_eceval.scm",
+        "test/R5RS/icp/icp_8_compiler.scm",
+        "test/R5RS/various/lambda-update.scm",
         "test/R5RS/various/strong-update.scm"
+        
+         */
       )
     )
 

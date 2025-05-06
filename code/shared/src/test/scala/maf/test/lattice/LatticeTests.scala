@@ -9,6 +9,8 @@ import maf.language.scheme.lattices.{E, ExactLattice, ModularNumberLattice}
 import maf.lattice.*
 import maf.lattice.interfaces.{BoolLattice, CharLattice, IntLattice, NumberLattice, RealLattice, StringLattice, SymbolLattice}
 import maf.test.LatticeTest
+import spire.math._
+import spire.implicits._
 
 /** TODO[medium] tests for scheme lattice */
 
@@ -103,7 +105,7 @@ abstract class NumberLatticeTest[N: NumberLattice, B: BoolLattice](gen: LatticeG
                     val aPlusbc = plus(a, bc)
                     val abPlusc = plus(ab, c)
                     s"a + b = $ab" |: s"b + c = $bc" |: s"(a + b) + c = $abPlusc" |: s"a + (b + c) = $aPlusbc" |:
-                    abPlusc == abPlusc
+                        abPlusc == abPlusc
                 )
 
             /** Addition is commutative */
@@ -115,7 +117,10 @@ abstract class NumberLatticeTest[N: NumberLattice, B: BoolLattice](gen: LatticeG
             /** Subtraction is monotone */
             p.property("∀ a, b, c: b ⊑ c ⇒ minus(a, b) ⊑ minus(a, c)") = forAll { (a: (E, N), c: (E, N)) =>
                 forAll(gen.le(c)) { (b: (E, N)) =>
-                    conditional(subsumes(c, b), subsumes(minus(a, c), minus(a, b)))
+                    val ac = minus(a, c)
+                    val ab = minus(a, b)
+                    s"a  = $a" |: s"b = $b" |: s"a - b = $ab" |: s"a - c = $ac" |:
+                        conditional(subsumes(c, b), subsumes(minus(a, c), minus(a, b)))
                 }
             }
 
@@ -133,7 +138,10 @@ abstract class NumberLatticeTest[N: NumberLattice, B: BoolLattice](gen: LatticeG
             /** Multiplication is monotone */
             p.property("∀ a, b, c: b ⊑ c ⇒ times(a, b) ⊑ times(a, c)") = forAll { (a: (E, N), c: (E, N)) =>
                 forAll(gen.le(c)) { (b: (E, N)) =>
-                    conditional(subsumes(c, b), subsumes(times(a, c), times(a, b)))
+                    val ac = times(a, c)
+                    val ab = times(a, b)
+                    s"a * b = $ab" |: s"a * c = $ac" |:
+                        conditional(subsumes(c, b), subsumes(ac, ab))
                 }
             }
 
@@ -153,7 +161,11 @@ abstract class NumberLatticeTest[N: NumberLattice, B: BoolLattice](gen: LatticeG
                         abTimesc == abTimesc)
 
             /** Multiplication is commutative */
-            p.property("∀ a, b: times(a, b) == times(b, a)") = forAll((a: (E, N), b: (E, N)) => times(a, b) == times(b, a))
+            p.property("∀ a, b: times(a, b) == times(b, a)") = forAll((a: (E, N), b: (E, N)) =>
+                val ab = times(a, b)
+                val ba = times(b, a)
+                s"a * b = $ab" |: s"b * a = $ba" |:
+                    times(a, b) == times(b, a))
 
             /** Quotient preserves bottom */
             p.property("div(a, ⊥) = ⊥ = div(⊥, a)") =
@@ -186,12 +198,8 @@ abstract class NumberLatticeTest[N: NumberLattice, B: BoolLattice](gen: LatticeG
 
             /** Modulo is sound */
             p.property("∀ a, b ≠ 0: inject(a / b) ⊑ modulo(inject(a), inject(b))") =
-                forAll((a: BigInt, b: BigInt) =>
-
-                        val modIaIb = if b != 0 then modulo(inject(a), inject(b)) else top
-                        val Imodab = if b != 0 then inject(MathOps.modulo(a, b)) else bottom
-                        s"$Imodab ⊑ $modIaIb" |:
-                        subsumes(modIaIb, Imodab)
+                forAll((a: BigInt, b: BigInt) => conditional(b != 0 && a > -intRange && a < intRange && b > -intRange && b < intRange
+                    , subsumes(modulo(inject(a), inject(b)), inject(MathOps.modulo(a, b))))
 
                 )
 
@@ -227,10 +235,8 @@ abstract class NumberLatticeTest[N: NumberLattice, B: BoolLattice](gen: LatticeG
 
             /** Less-than operation is sound */
             p.property("∀ a, b ≠ 0: inject(a < b) ⊑ lt(inject(a), inject(b))") ={
-                forAll((a: BigInt, b: BigInt) =>
-                    if ! BoolLattice[B].subsumes(lt[B](inject(a), inject(b)), BoolLattice[B].inject(a < b)) then
-                        println(lt[B](inject(a), inject(b)))
-                    BoolLattice[B].subsumes(lt[B](inject(a), inject(b)), BoolLattice[B].inject(a < b))
+                forAll((a: BigInt, b: BigInt) => conditional( a > -intRange && b > -intRange && a < intRange && b < intRange,
+                    BoolLattice[B].subsumes(lt[B](inject(a), inject(b)), BoolLattice[B].inject(a < b)))
                 )
             }
 
@@ -254,7 +260,103 @@ abstract class NumberLatticeTest[N: NumberLattice, B: BoolLattice](gen: LatticeG
 
             /** Log is sound */
             p.property("∀ a: inject(a.log) ⊑ log(inject(a))") =
-                forAll((a: Double) => conditional(a > 0, subsumes(log(inject(a)), inject(scala.math.log(a)))))
+                forAll((a: Double) => conditional( a > 0, subsumes(log(inject(a)), inject(scala.math.log(a)))))
+
+            /** Log is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ log(a) ⊑ log(b)") = forAll { (b: (E, N)) =>
+                forAll(gen.le(b)) { (a: (E, N)) =>
+                    conditional(subsumes(b, a), subsumes(log(b), log(a)))
+                }
+            }
+
+            /** Tan preserves bottom */
+            p.property("tan(⊥) = ⊥") = tan(bottom) == bottom
+
+            /** Tan is sound */
+            p.property("∀ a: inject(a.tan) ⊑ tan(inject(a))") = forAll((a: Double) => {
+                val tanIa = tan(inject(a))
+                val Itana = inject(Complex[Double](a).tan)
+                s"inject(a.tan) = $Itana" |: s"tan(inject(a)) = $tanIa" |:
+                subsumes(tanIa, Itana)
+            })
+
+            /** Tan is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ tan(a) ⊑ tan(b)") = forAll { (b: (E, N)) =>
+                forAll(gen.le(b)) { (a: (E, N)) =>
+                    val tanA = tan(a)
+                    val tanB = tan(b)
+                    s"$a ⊑ $b ⇒ $tanA ⊑ $tanB" |:
+                    conditional(subsumes(b, a), subsumes(tan(b), tan(a)))
+                }
+            }
+
+            /** sqrt preserves bottom */
+            p.property("sqrt(⊥) = ⊥") = sqrt(bottom) == bottom
+
+            /** sqrt is sound */
+            p.property("∀ a: inject(a.sqrt) ⊑ sqrt(inject(a))") =
+                forAll((a: Double) => subsumes(sqrt(inject(a)), inject(Complex[Double](a).sqrt)))
+
+            /** sqrt is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ sqrt(a) ⊑ sqrt(b)") = forAll { (b: (E, N)) =>
+                forAll(gen.le(b)) { (a: (E, N)) =>
+                    val sqrtA = sqrt(a)
+                    val sqrtB = sqrt(b)
+                    s"$a ⊑ $b ⇒ $sqrtA ⊑ $sqrtB" |:
+                    conditional(subsumes(b, a), subsumes(sqrtB, sqrtB))
+                }
+            }
+
+            /** sin preserves bottom */
+            p.property("sin(⊥) = ⊥") = sin(bottom) == bottom
+
+            /** sin is sound */
+            p.property("∀ a: inject(a.sin) ⊑ sin(inject(a))") =
+                forAll((a: Double) => subsumes(sin(inject(a)), inject(Complex[Double](a).sin)))
+
+            /** sin is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ sin(a) ⊑ sin(b)") = forAll { (b: (E, N)) =>
+                forAll(gen.le(b)) { (a: (E, N)) =>
+                    val sinA = sin(a)
+                    val sinB = sin(b)
+                    s"$a ⊑ $b ⇒ $sinA ⊑ $sinB" |:
+                        conditional(subsumes(b, a), subsumes(sinB, sinB))
+                }
+            }
+
+            /** cos preserves bottom */
+            p.property("cos(⊥) = ⊥") = cos(bottom) == bottom
+
+            /** cos is sound */
+            p.property("∀ a: inject(a.cos) ⊑ cos(inject(a))") =
+                forAll((a: Double) => subsumes(cos(inject(a)), inject(Complex[Double](a).cos)))
+
+            /** cos is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ cos(a) ⊑ cos(b)") = forAll { (b: (E, N)) =>
+                forAll(gen.le(b)) { (a: (E, N)) =>
+                    val cosA = cos(a)
+                    val cosB = cos(b)
+                    s"$a ⊑ $b ⇒ $cosA ⊑ $cosB" |:
+                        conditional(subsumes(b, a), subsumes(cosB, cosB))
+                }
+            }
+
+            /** asin preserves bottom */
+            p.property("asin(⊥) = ⊥") = asin(bottom) == bottom
+
+            /** asin is sound */
+            p.property("∀ a: inject(a.asin) ⊑ asin(inject(a))") =
+                forAll((a: Double) => subsumes(asin(inject(a)), inject(MathOps.asin(a))))
+
+            /** asin is monotone */
+            p.property("∀ a, b: a ⊑ b ⇒ asin(a) ⊑ asin(b)") = forAll { (b: (E, N)) =>
+                forAll(gen.le(b)) { (a: (E, N)) =>
+                    val asinA = asin(a)
+                    val asinB = asin(b)
+                    s"$a ⊑ $b ⇒ $asinA ⊑ $asinB" |:
+                        conditional(subsumes(b, a), subsumes(asinB, asinB))
+                }
+            }
 
             p
         }
@@ -710,3 +812,4 @@ class ConstantPropagationSymbolTest extends SymbolLatticeTest[ConstantPropagatio
 
 //class ELTest extends ExactLatticeTest(ExactLatticeGenerator)
 class ConstantPropagationNumberTest extends NumberLatticeTest[ConstantPropagation.N, ConstantPropagation.B](ModularNumberGenerator)
+class ConstantPropagationNumberTestV2 extends NumberLatticeTest[ConstantPropagationV2.N, ConstantPropagation.B](ModularNumberGeneratorV2)

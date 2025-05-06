@@ -41,9 +41,9 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
     
     sealed trait Number
 
-    final case class IntN(n: BigInt) extends Number
-    final case class RealN(n: Double) extends Number
-    final case class CompN(n: Complex[Double]) extends Number
+    private final case class IntN(n: BigInt) extends Number
+    private final case class RealN(n: Double) extends Number
+    private final case class CompN(n: Complex[Double]) extends Number
 
      
 
@@ -58,23 +58,6 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
         type Inject = Boolean
         override def inject(v: Inject): Abstract = BoolLattice[B].inject(v)
         def wrap = Bool.apply
-/*
-    object IntT extends AbstractWrapType[I, Int]:
-        type Inject = BigInt
-        override def inject(v: Inject): Abstract = IntLattice[I].inject(v)
-        def wrap = Int.apply
-
-    object RealT extends AbstractWrapType[R, Real]:
-        type Inject = Double
-        override def inject(v: Inject): Abstract = RealLattice[R].inject(v)
-        def wrap = Real.apply
-
-    object ComplexT extends AbstractWrapType[Comp, Compl]:
-        type Inject = Complex[Double]
-        override def inject(v: Inject): Abstract = NumberLattice[N].inject(v)
-        def wrap = Compl.apply
-
- */
 
     object NumbT extends AbstractWrapType[(E, N), Numb]:
         type Inject = Number
@@ -252,26 +235,6 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
         def typeName = "BOOL"
         val tpy = BoolT
         override def toString: String = BoolLattice[B].show(b)
-  /*
-    case class Int(i: I) extends Value, Product1[I]:
-        def ord = 2
-        def typeName = "INTE"
-        val tpy = IntT
-        override def toString: String = IntLattice[I].show(i)
-
-    case class Real(r: R) extends Value, Product1[R]:
-        def ord = 3
-        def typeName = "REAL"
-        val tpy = RealT
-        override def toString: String = RealLattice[R].show(r)
-
-    case class Compl(c: Comp) extends Value, Product1[N]:
-        def ord = 3
-        def typeName = "COMPLEX"
-        val tpy = ComplexT
-        override def toString: String = NumberLattice[N].show(c)
-
-   */
 
     case class Numb(n: (E, N)) extends Value, Product1[(E, N)]:
         def ord = 3
@@ -515,7 +478,15 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
                     MayFail.success(args(0) match {
                         case numb: Numb => Bool(ModularNumberLattice[N].isComplex[B](numb.n))
                         case _       => False
-                    })    
+                    })
+                case IsExact =>
+                    args(0) match
+                        case Numb(n) => MayFail.success(Bool(ModularNumberLattice[N].isExact(n)))
+                        case v => MayFail.failure(TypeError("expected number for exact?", v))
+                case IsInexact =>
+                    args(0) match
+                        case Numb(n) => MayFail.success(Bool(ModularNumberLattice[N].isInexact(n)))
+                        case v => MayFail.failure(TypeError("expected number for inexact?", v))
                 case IsBoolean =>
                     MayFail.success(args(0) match {
                         case _: Bool => True
@@ -527,6 +498,15 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
                         case _: Numb => True
                         case _                    => False
                     })
+                case RealPart =>
+                    args(0) match
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[N].realPart(n)))
+                        case _ => MayFail.failure(TypeError("number needed for real-part", args(0)))
+
+                case ImagPart =>
+                    args(0) match
+                        case Numb(n) => MayFail.success(Numb(ModularNumberLattice[N].imagPart(n)))
+                        case _ => MayFail.failure(TypeError("number needed for imag-part", args(0)))        
 
                 case IsTrue =>
                     MayFail.success(BoolT.alpha(isTrue(args(0))))
@@ -627,17 +607,20 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
                         case _      => MayFail.failure(OperatorNotApplicable("string-length", args))
                 case NumberToString =>
                     args(0) match
-                        //case Int(n)  => MayFail.success(Str(IntLattice[I].toString(n)))
-                        //case Real(n) => MayFail.success(Str(RealLattice[R].toString(n)))
+                        case Numb(n) => MayFail.success(Str(ModularNumberLattice[N].toString(n)))
                         case _       => MayFail.failure(OperatorNotApplicable("number->string", args))
                 case StringToNumber =>
                     args(0) match
                         // TODO: string may also be a float!
-                        //case Str(s) => StringLattice[S].toNumber(s).map(Int.apply)
+                        case Str(s) => StringLattice[S].toNumber(s).map(Numb.apply)
                         case _      => MayFail.failure(OperatorNotApplicable("string->number", args))
                 case IntegerToCharacter =>
                     args(0) match
-                        //case Int(i) => MayFail.success(Char(IntLattice[I].toChar(i)))
+                        case Numb(i) => 
+                            if BoolLattice[B].isTrue(ModularNumberLattice[N].isExactInt(i)) then
+                                MayFail.success(Char(ModularNumberLattice[N].toChar(i)))
+                            else
+                                MayFail.failure(TypeError("Exact int needed for integer->char", i))
                         case _      => MayFail.failure(OperatorNotApplicable("integer->char", args))
                 case SymbolToString =>
                     args(0) match
@@ -729,11 +712,19 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
                         case _                  => MayFail.failure(OperatorNotApplicable("string-append", args))
                 case StringRef =>
                     (args(0), args(1)) match
-                        //case (Str(s), Int(n)) => MayFail.success(Char(StringLattice[S].ref(s, n)))
+                        case (Str(s), Numb(n)) => 
+                            if BoolLattice[B].isTrue(ModularNumberLattice[N].isExactInt(n)) then
+                                MayFail.success(Char(StringLattice[S].ref(s, n)))
+                            else
+                                MayFail.failure(TypeError("Exact int needed for string-ref", n))
                         case _                => MayFail.failure(OperatorNotApplicable("string-ref", args))
                 case StringSet =>
                     (args(0), args(1), args(2)) match
-                        //case (Str(s), Int(n), Char(c)) => MayFail.success(Str(StringLattice[S].set(s, n, c)))
+                        case (Str(s), Numb(n), Char(c)) => 
+                            if BoolLattice[B].isTrue(ModularNumberLattice[N].isExactInt(n)) then
+                                MayFail.success(Str(StringLattice[S].set(s, n, c)))
+                            else
+                                MayFail.failure(TypeError("Exact int needed for string-set", n))
                         case _                         => MayFail.failure(OperatorNotApplicable("string-set!", args))
                 case StringLt =>
                     (args(0), args(1)) match
@@ -757,11 +748,19 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
                         case _                    => MayFail.failure(OperatorNotApplicable("char-ci<?", args))
                 case Substring =>
                     (args(0), args(1), args(2)) match
-                        //case (Str(s), Int(from), Int(to)) => MayFail.success(Str(StringLattice[S].substring(s, from, to)))
+                        case (Str(s), Numb(from), Numb(to)) =>
+                            if BoolLattice[B].isTrue(ModularNumberLattice[N].isExactInt(from)) && BoolLattice[B].isTrue(ModularNumberLattice[N].isExactInt(to)) then
+                                MayFail.success(Str(StringLattice[S].substring(s, from, to)))
+                            else
+                                MayFail.failure(TypeError("Exact int needed for substring", from))
                         case _                            => MayFail.failure(OperatorNotApplicable("substring", args))
                 case MakeString =>
                     (args(0), args(1)) match
-                        //case (Int(length), Char(c)) => MayFail.success(Str(IntLattice[I].makeString(length, c)))
+                        case (Numb(length), Char(c)) => 
+                            if BoolLattice[B].isTrue(ModularNumberLattice[N].isExactInt(length)) then
+                                MayFail.success(Str(ModularNumberLattice[N].makeString(length, c)))
+                            else
+                                MayFail.failure(TypeError("Exact int needed for make-string", length))
                         case _                      => MayFail.failure(OperatorNotApplicable("make-string", args))
 
         def car(x: Value): MayFail[L, Error] = x match
@@ -796,49 +795,55 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
           ): MayFail[L, Error] =
             (vector, index) match
                 case (Vec(size, content), Numb(index)) =>
-                    val comp = ModularNumberLattice[N].lt[B](index, size)
-                    val t: L =
-                        if BoolLattice[B].isTrue(comp) then
-                            content.find({ case (k, _) => ModularNumberLattice[N].subsumes(k, index) }) match
-                                case Some((index2, _)) =>
-                                    // Case 1: there is an `index2` that already subsumes `index`
-                                    // Then we just update the value for `index2`
-                                    Element(
-                                      Vec(
-                                        size,
-                                        content + (index2 -> schemeLattice.join(content(index2), newval))
-                                      )
-                                    )
-                                case None =>
-                                    val subsumedKeys = content.keySet.filter(k => ModularNumberLattice[N].subsumes(index, k))
-                                    if subsumedKeys.nonEmpty then
-                                        // Case 2: this index subsumes other indices
-                                        // In that case, we join all values and removed the subsumed indices
-                                        val joinedValues = schemeLattice.join(content.view.filterKeys(subsumedKeys).toMap.values)
-                                        val contentWithoutSubsumedKeys = subsumedKeys.foldLeft(content)((acc, k) => acc - k)
-                                        Element(Vec(size, contentWithoutSubsumedKeys + (index -> schemeLattice.join(joinedValues, newval))))
-                                    else
-                                        // Case 3: there is nothing in `content` that we can update, so we add a new key
-                                        Element(Vec(size, content + (index -> newval)))
-                        else schemeLattice.bottom
-                    // We ignore out-of-bounds accesses, mostly because most of them will be spurious.
-                    // For example, vector-set! called with Int as first argument would result in
-                    // a possible out-of-bound access
-                    val f: L = schemeLattice.bottom
-                    MayFail.success(schemeLattice.join(t, f))
+                    if BoolLattice[B].isTrue(ModularNumberLattice[N].isExactInt(index)) then
+                        val comp = ModularNumberLattice[N].lt[B](index, size)
+                        val t: L =
+                            if BoolLattice[B].isTrue(comp) then
+                                content.find({ case (k, _) => ModularNumberLattice[N].subsumes(k, index) }) match
+                                    case Some((index2, _)) =>
+                                        // Case 1: there is an `index2` that already subsumes `index`
+                                        // Then we just update the value for `index2`
+                                        Element(
+                                          Vec(
+                                            size,
+                                            content + (index2 -> schemeLattice.join(content(index2), newval))
+                                          )
+                                        )
+                                    case None =>
+                                        val subsumedKeys = content.keySet.filter(k => ModularNumberLattice[N].subsumes(index, k))
+                                        if subsumedKeys.nonEmpty then
+                                            // Case 2: this index subsumes other indices
+                                            // In that case, we join all values and removed the subsumed indices
+                                            val joinedValues = schemeLattice.join(content.view.filterKeys(subsumedKeys).toMap.values)
+                                            val contentWithoutSubsumedKeys = subsumedKeys.foldLeft(content)((acc, k) => acc - k)
+                                            Element(Vec(size, contentWithoutSubsumedKeys + (index -> schemeLattice.join(joinedValues, newval))))
+                                        else
+                                            // Case 3: there is nothing in `content` that we can update, so we add a new key
+                                            Element(Vec(size, content + (index -> newval)))
+                            else schemeLattice.bottom
+                        // We ignore out-of-bounds accesses, mostly because most of them will be spurious.
+                        // For example, vector-set! called with Int as first argument would result in
+                        // a possible out-of-bound access
+                        val f: L = schemeLattice.bottom
+                        MayFail.success(schemeLattice.join(t, f))
+                    else
+                        MayFail.failure(TypeError("expecting int to set vector", index))
                 case (_: Vec, _) => MayFail.failure(TypeError("expecting int to set vector", index))
                 case _           => MayFail.failure(TypeError("vector-set!: expecting vector", vector))
 
         def vector(size: Value, init: L): MayFail[Value, Error] = size match
             case Numb(size) =>
-                MayFail.success(if init == ModularNumberLattice[N].bottom then {
-                    Vec(size, Map[(E, N), L]())
-                } else {
-                    // Field-sensitive vectors:
-                    // Vec(size, Map.from[I, L](IntLattice[I].valuesBetween(IntLattice[I].inject(0), size).map(idx => idx -> init).toList))
-                    // Field-insensitive vectors:
-                    Vec(size, Map[(E, N), L](ModularNumberLattice[N].top -> init))
-                })
+                if BoolLattice[B].isTrue(ModularNumberLattice[N].isExactInt(size)) then
+                    MayFail.success(if init == ModularNumberLattice[N].bottom then {
+                        Vec(size, Map[(E, N), L]())
+                    } else {
+                        // Field-sensitive vectors:
+                        // Vec(size, Map.from[I, L](IntLattice[I].valuesBetween(IntLattice[I].inject(0), size).map(idx => idx -> init).toList))
+                        // Field-insensitive vectors:
+                        Vec(size, Map[(E, N), L](ModularNumberLattice[N].top -> init))
+                    })
+                else
+                    MayFail.failure(TypeError("expected int size when constructing vector", size))
             case _ => MayFail.failure(TypeError("expected int size when constructing vector", size))
 
         // Indicates whether a lock is held.

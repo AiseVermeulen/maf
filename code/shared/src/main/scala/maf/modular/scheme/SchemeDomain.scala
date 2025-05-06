@@ -95,6 +95,22 @@ trait SchemeConstantPropagationDomain extends ModularSchemeDomain:
     val modularLatticeWrapper = SchemeConstantPropagationDomain
     override def domainName: String = "modular constant propagation Scheme domain"
 
+object SchemeConstantPropagationDomainV2 extends ModularSchemeLatticeWrapper:
+    // use constant propagation domains everywhere, except for booleans
+    type S = ConstantPropagation.S
+    type B = ConstantPropagation.B
+    type C = ConstantPropagation.C
+    type Sym = ConstantPropagation.Sym
+    type N = ConstantPropagationV2.N
+    // make the scheme lattice
+    final val modularLattice = new ModularSchemeLattice
+    final val primitives = new SchemeLatticePrimitives()(modularLattice.schemeLattice)
+
+trait SchemeConstantPropagationDomainV2 extends ModularSchemeDomain:
+    val modularLatticeWrapper = SchemeConstantPropagationDomainV2
+
+    override def domainName: String = "modular constant propagation Scheme domain"    
+
 //
 // POWERSET DOMAIN
 //

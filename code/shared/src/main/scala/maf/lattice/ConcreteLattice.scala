@@ -216,9 +216,7 @@ class ConcreteLattice:
         implicit val realConcrete: RealLattice[R] = new BaseInstance[Double]("Real") with RealLattice[R] {
             def inject(x: Double): R = makeValues(Set(x))
             def toInt[I2: IntLattice](n: R): I2 = n.foldMap(n => IntLattice[I2].inject(n.toInt))
-            def toComplex[Comp2: NumberLattice](n: R): Comp2 = n match
-                case Top => NumberLattice[Comp2].top
-                case Values(content) => content.foldMap((n: Double) => NumberLattice[Comp2].inject(Complex[Double](n)))
+            def toComplex[N2: NumberLattice](n: R): N2 = n.foldMap((n: Double) => NumberLattice[N2].inject(Complex[Double](n)))
             def ceiling(n: R): R = n.map(_.ceil)
             def floor(n: R): R = n.map(_.floor)
             def round(n: R): R = n.map(n => MathOps.round(n))
@@ -252,9 +250,13 @@ class ConcreteLattice:
 
             case object Real extends L[Nothing]
             case object Integer extends L[Nothing]
+            case object ExclReal extends L[Nothing]
+            case object ExclComplex extends L[Nothing]
 
             val real = Real
             val integer = Integer
+            val exclReal = ExclReal
+            val exclComplex = ExclComplex
 
             override def modulo(n1: N, n2: N): N = ???
             override def quotient(n1: N, n2: N): N = ???
@@ -266,7 +268,12 @@ class ConcreteLattice:
             override def toString[S: StringLattice](n: N): S = ???
             override def floor(n: N): N = ???
             override def round(n: N): N = ???
-            override def isReal[B: BoolLattice](n: N): B = ??? 
+            override def isReal[B: BoolLattice](n: N): B = ???
+            override def imagPart(n: N): N = ???
+            override def realPart(n: N): N = ???
+            override def toChar[C: CharLattice](n: N): C = ???
+            override def makeString[C: CharLattice, S: StringLattice](length: N, char: C): S = ???
+           
             
             def log(n: N): N = n.map(n => n.log)
             def sin(n: N): N = n.map(n => n.sin)

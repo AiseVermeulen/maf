@@ -1,5 +1,8 @@
 package maf.lattice
 
+import spire.math._
+import spire.implicits._
+
 import scala.util.Random
 
 /** Various implementations of mathematical utilities functions. */
@@ -29,3 +32,19 @@ object MathOps:
         if (scala.math.abs(frac) == 0.5) && (((n > 0) && ((scala.math.abs(n - frac) % 2) == 0)) || ((n < 0) && (((n - frac) % 2) == -1))) then
             scala.math.round(n).toDouble - 1
         else scala.math.round(n).toDouble
+
+    //The calculations in Complex use log, so gives an error when passed 0
+    def acos(n: Double): Complex[Double] =
+        if n != 0 then Complex[Double](n).acos
+        else Complex[Double](scala.math.acos(n))
+
+    def acos(n : Complex[Double]): Complex[Double] =
+        if n == 0 then Complex[Double](scala.math.acos(0))
+        else n.acos
+
+    def asin(n: Double): Complex[Double] =
+        if n != 0 then Complex[Double](n).asin
+        else Complex[Double](scala.math.asin(n))
+
+    def asin(n: Complex[Double]): Complex[Double] =
+        n.asin

@@ -16,25 +16,13 @@ trait LatticeGenerator[L]:
     implicit val shrink: Shrink[L] = Shrink(v => Stream.empty)
 
 object Generators:
-    def makeSmaller(x: Double): Double =
-        if x > 1000 || x < -1000 then
-            makeSmaller(scala.math.round(x)/10)
-        else
-            x
     val str: Gen[String] = Gen.resize(10, Gen.oneOf(Gen.identifier, Gen.alphaStr, Gen.numStr))
     val int: Gen[BigInt] = Gen.choose(-1000, 1000)
     val double: Gen[Double] = Gen.choose(-1000.0, 1000.0)
     val char: Gen[Char] = Gen.choose(0.toChar, 255.toChar)
     val sym: Gen[String] = Gen.resize(10, Gen.oneOf(Gen.identifier, Gen.alphaStr))
-    val complex: Gen[Complex[Double]] = Gen.resultOf[Double, Double, Complex[Double]]((x, y) => Complex[Double](makeSmaller(x), makeSmaller(y)))
-    /*
-    val number: Gen[Complex[Double]] = Gen.oneOf[Complex[Double]](
-            Gen.resultOf[BigInt, Complex[Double]](i =>  Complex[Double](i.toDouble)),
-            Gen.resultOf[Double, Complex[Double]](r => Complex[Double](r)),
-            complex)
-
-     */
-
+    val complex: Gen[Complex[Double]] = Gen.resultOf[Double, Double, Complex[Double]]((x, y) => Complex[Double](x, y))
+   
 class BooleanGenerator[B: BoolLattice] extends LatticeGenerator[B]:
 
     /** ConcreteBool is a finite lattice with four elements */
@@ -157,9 +145,39 @@ object ConstantPropagationNumberGenerator extends LatticeGenerator[ConstantPropa
         else
             Gen.oneOf(l, lat.bottom)
 
+object ConstantPropagationNumberGeneratorV2 extends LatticeGenerator[ConstantPropagationV2.L[Complex[Double]]]:
+    val lat = NumberLattice[ConstantPropagationV2.N]
+    def constcompgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = for x <- Generators.complex yield ConstantPropagationV2.Constant(x)
+    def constintgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = for x <- Generators.int yield ConstantPropagationV2.Constant(Complex[Double](x.toDouble, 0))
+    def constrealgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = for x <- Generators.double yield ConstantPropagationV2.Constant(Complex[Double](x, 0))
+    def botgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = lat.bottom
+    def topgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = lat.top
+    def realgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = lat.real
+    def intgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = lat.integer
+    def exclrealgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = lat.exclReal
+    def exclcompgen: Gen[ConstantPropagationV2.L[Complex[Double]]] = lat.exclComplex
+    def any: Gen[ConstantPropagationV2.L[Complex[Double]]] =
+        Gen.oneOf(constrealgen, constintgen, constcompgen, realgen, intgen, topgen, botgen, exclrealgen, exclcompgen)
+    def le(l: ConstantPropagationV2.L[Complex[Double]]): Gen[ConstantPropagationV2.L[Complex[Double]]] =
+        if l == lat.top then
+            any
+        else if l == lat.exclComplex then
+            Gen.oneOf(constcompgen, exclcompgen, botgen)
+        else if l == lat.exclReal then
+            Gen.oneOf(constrealgen, exclrealgen, botgen)
+        else if l == lat.real then
+            Gen.oneOf(constrealgen, constintgen, realgen, intgen, botgen, exclrealgen)
+        else if l == lat.integer then
+            Gen.oneOf(constintgen, intgen, botgen)
+        else if l == lat.bottom then
+            botgen
+        else
+            Gen.oneOf(l, lat.bottom)
+
 
 object ConstantPropagationRealGenerator extends ConstantPropagationGenerator[Double](Generators.double)
 object ConstantPropagationCharGenerator extends ConstantPropagationGenerator[Char](Generators.char)
 object ConstantPropagationSymbolGenerator extends ConstantPropagationGenerator[String](Generators.sym)(ConstantPropagation.L.symCP)
 
 object ModularNumberGenerator extends NumberGenerator[ConstantPropagation.N](ExactLatticeGenerator, ConstantPropagationNumberGenerator)
+object ModularNumberGeneratorV2 extends NumberGenerator[ConstantPropagationV2.N](ExactLatticeGenerator, ConstantPropagationNumberGeneratorV2)
