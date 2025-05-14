@@ -309,10 +309,13 @@ class SchemeLatticePrimitives[V, A <: Address](implicit override val schemeLatti
 
         case object `sqrt` extends SchemePrim1("sqrt"):
             def call[M[_]: PrimM](fpos: SchemeExp, x: V): M[V] =
-                ifThenElse(`<`.call(x, number(0))) {
+                
+               /* ifThenElse(`<`.call(x, number(0))) {
                     /* n < 0 */
                     PrimM[M].fail(PrimitiveNotApplicable("sqrt", List(x)))
                 } {
+                
+                */
                     /* n >= 0 */
                     for
                         r <- unaryOp(SchemeOp.Sqrt)(x)
@@ -323,7 +326,7 @@ class SchemeLatticePrimitives[V, A <: Address](implicit override val schemeLatti
                         exr <- inexactToExact(r)
                         res <- ifThenElse(PrimM[M].inject(convert))(PrimM[M].inject(exr))(PrimM[M].inject(r))
                     yield res
-                }
+                
 
         abstract class SchemePrimRefTypeCheck(name: String, check: SchemeOp.SchemeOp1) extends SchemePrim1(name):
             def call[M[_]: PrimM](fpos: SchemeExp, x: V): M[V] =

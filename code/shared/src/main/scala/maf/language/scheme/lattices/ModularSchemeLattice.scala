@@ -134,7 +134,7 @@ class ModularSchemeLattice[A <: Address, S: StringLattice, B: BoolLattice,  C: C
                     // potentially unsafe, should really be improved
                     Value
                         .vectorSet(acc, Numb(k), v)
-                        .map(v => v.get(VecT)(using Default.errorIfDefault))
+                        .map(v => v.get(VecT)(using Default.errorIfDefault)) 
                         .getOrElse(throw new Exception("operation failed"))
                 })
                 val vWithEls2Joined = els2.foldLeft(vWithEls1Joined)({ case (acc, (k, v)) =>

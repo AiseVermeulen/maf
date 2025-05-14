@@ -50,9 +50,9 @@ abstract class AnalysisComparison[Bln: BoolLattice, Chr: CharLattice, Str: Strin
             results = results.add(path, name, refined)
         }
         // run a concrete interpreter on the benchmarks
-        val concreteResult = runInterpreter(program, path, concreteTimeout(), concreteRuns())
-        val refined = concreteResult.map(store => compareOrdered(baseResult, store).size)
-        results = results.add(path, "concrete", refined)
+        //val concreteResult = runInterpreter(program, path, concreteTimeout(), concreteRuns())
+        //val refined = concreteResult.map(store => compareOrdered(baseResult, store).size)
+        //results = results.add(path, "concrete", refined)
 
 object AnalysisComparison1
     extends AnalysisComparison[
@@ -69,13 +69,14 @@ object AnalysisComparison1
     def otherAnalyses() =
         // run some regular k-cfa analyses
         List(
-          //(SchemeAnalyses.modflocalAnalysis(_, 0), "0-CFA DSS"),
+            (SchemeAnalyses.contextInsensitiveAnalysis(_), "Versie 2")
+            //(SchemeAnalyses.modflocalAnalysis(_, 0), "0-CFA DSS")
           //(SchemeAnalyses.modflocalAnalysisAdaptiveA(_, k, l), s"$k-CFA DSS w/ ASW (l = $l)")
         )
 
     def main(args: Array[String]) = runBenchmarks(
       Set(
-        "test/R5RS/various/mceval.scm"
+        "test/R5RS/test.scm"
       )
     )
 

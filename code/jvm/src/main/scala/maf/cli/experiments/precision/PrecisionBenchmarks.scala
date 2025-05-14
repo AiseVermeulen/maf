@@ -203,6 +203,7 @@ abstract class PrecisionBenchmarks[Bln: BoolLattice, Chr: CharLattice, Str: Stri
             else TimedOut(res)
         catch
             case e: Exception =>
+                e.printStackTrace()
                 println(s"Analyzer failed with exception $e")
                 Errored(e)
             case e: VirtualMachineError =>

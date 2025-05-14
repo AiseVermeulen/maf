@@ -72,7 +72,7 @@ object AnalysisComparisonAlt1
       ConstantPropagation.C,
       ConstantPropagation.S,
       ConstantPropagation.Sym, 
-      ConstantPropagation.N
+      ConstantPropagationV2.N
     ]:
     def k = 0
     def ls = List(100)
@@ -83,11 +83,12 @@ object AnalysisComparisonAlt1
     //lazy val adaptive: List[(SchemeExp => Analysis, String)] = ls.map { l =>
     //    (SchemeAnalyses.modflocalAnalysisAdaptiveA(_, k, l), s"$k-CFA DSS w/ ASW (l = $l)")
     //}
-    def analyses =  List((SchemeAnalyses.contextInsensitiveAnalysis(_), "Versie 1"))
-    //def analyses =  List((SchemeAnalyses.contextInsensitiveAnalysisV2(_), "Versie 2"))
+    //def analyses =  List((SchemeAnalyses.contextInsensitiveAnalysis(_), "Versie 1"))
+    def analyses =  List((SchemeAnalyses.contextInsensitiveAnalysisV2(_), "Versie 2"))
     def main(args: Array[String]) = runBenchmarks(
       Set(
           "test/R5RS/test.scm"
+          //"test/R5RS/test2.scm"
         /*
         "test/R5RS/various/collatz.scm",
         "test/R5RS/various/mceval.scm",

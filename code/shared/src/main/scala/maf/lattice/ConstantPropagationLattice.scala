@@ -22,6 +22,7 @@ object ConstantPropagation:
             case Top         => typeName
             case Constant(x) => x.toString
             case Bottom      => s"$typeName.⊥"
+            case _ => ""
         val bottom: L[A] = Bottom
         val top: L[A] = Top
         def join(x: L[A], y: => L[A]): L[A] = x match
@@ -339,6 +340,14 @@ object ConstantPropagation:
             val exclReal = ExclReal
             val exclComplex = ExclComplex
 
+            override def show(n: N): String =
+                n match
+                    case Real => "Real"
+                    case Integer => "Integer"
+                    case ExclReal => "exclusive real"
+                    case ExclComplex => "exclusive complex"
+                    case _ => super.show(n)
+
             private def isConstantInteger(n: Complex[Double]): Boolean =
                 n.isReal && (scala.math.round(n.real) == n.real)
 
@@ -415,6 +424,14 @@ object ConstantPropagation:
                     case (Real, _) => Real
                     case (_, Real) => Real
                     case (Integer, Integer) => Integer
+
+            override def eql[B2: BoolLattice](n1: N, n2: N): B2 = (n1, n2) match
+                case (Bottom, _) => BoolLattice[B2].bottom
+                case (_, Bottom) => BoolLattice[B2].bottom
+                case (Constant(x), Constant(y)) => BoolLattice[B2].inject(x == y)
+                case _ => BoolLattice[B2].top
+
+
 
             def generalRound(n: N, f: Double => Double): N =
                 n match

@@ -21,6 +21,7 @@ object ConstantPropagationV2:
             case Top         => typeName
             case Constant(x) => x.toString
             case Bottom      => s"$typeName.⊥"
+            case _ => ""
         val bottom: L[A] = Bottom
         val top: L[A] = Top
         def join(x: L[A], y: => L[A]): L[A] = x match
@@ -155,6 +156,24 @@ object ConstantPropagationV2:
                         case (ExclComplex, _) => Top
                         case (_, ExclComplex) => Top
                         case _ => Real
+
+            override def eql[B2: BoolLattice](n1: N, n2: N): B2 = (n1, n2) match
+                case (Constant(x), Constant(y)) => BoolLattice[B2].inject(x == y)
+                case _ => (constantToAbstract(n1), constantToAbstract(n2)) match
+                    case (Bottom, _) => BoolLattice[B2].bottom
+                    case (_, Bottom) => BoolLattice[B2].bottom
+                    case (Top, _) => BoolLattice[B2].top
+                    case (_, Top) => BoolLattice[B2].top
+                    case (ExclComplex, ExclComplex) => BoolLattice[B2].top
+                    case (ExclReal, ExclReal) => BoolLattice[B2].top
+                    case (Integer, Integer) => BoolLattice[B2].top
+                    case (_, ExclComplex) => BoolLattice[B2].inject(false)
+                    case (ExclComplex, _) => BoolLattice[B2].inject(false)
+                    case (Real, _) => BoolLattice[B2].top
+                    case (_, Real) => BoolLattice[B2].top
+                    case (_, ExclReal) => BoolLattice[B2].inject(false)
+                    case (ExclReal, _) => BoolLattice[B2].inject(false)
+                    case _ => BoolLattice[B2].top
 
             def generalRound(n: N, f: Double => Double): N =
                 n match

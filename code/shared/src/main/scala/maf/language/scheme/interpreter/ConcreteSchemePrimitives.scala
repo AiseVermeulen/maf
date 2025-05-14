@@ -67,6 +67,7 @@ trait ConcreteSchemePrimitives:
           Evenp, /* [vv] even?: Integer Operations */
           ExactToInexact, /* [vv] exact->inexact: Exactness */
           /* [x]  exact?: Exactness */
+          //Exactp,
           /* [x]  exp: Scientific */
           Expt, /* [vv] expt: Scientific */
           Floor, /* [vv] floor: Arithmetic */
@@ -75,6 +76,7 @@ trait ConcreteSchemePrimitives:
           /* [x]  imag-part: Complex */
           InexactToExact, /* [vv] inexact->exact: Exactness */
           /* [x]  inexact?: Exactness */
+          //Inexactp,
           IntegerToChar, /* [vv]  integer->char: Characters */
           Integerp, /* [vv] integer?: Integers */
           /* [x]  interaction-environment: Fly Evaluation */
@@ -312,8 +314,8 @@ trait ConcreteSchemePrimitives:
 
         object Sqrt extends SingleArgumentPrim("sqrt"):
             def fun =
-                case Value.Integer(x) if x < 0 => signalException(s"sqrt: negative argument $x")
-                case Value.Real(x) if x < 0    => signalException(s"sqrt: negative argument $x")
+                //case Value.Integer(x) if x < 0 => signalException(s"sqrt: negative argument $x")
+                //case Value.Real(x) if x < 0    => signalException(s"sqrt: negative argument $x")
                 case Value.Integer(x) =>
                     val r = scala.math.sqrt(x.toDouble)
                     if r == r.floor then Value.Integer(r.toInt)
@@ -839,6 +841,12 @@ trait ConcreteSchemePrimitives:
                 case _: Value.Integer => Value.Bool(true)
                 case _: Value.Real    => Value.Bool(true)
                 case _                => Value.Bool(false)
+       /*         
+        object Exactp extends SingleArgumentPrim("exact?"):
+            def fun =
+                case _: Value.Number    
+                
+        */
 
         object Vectorp extends SingleArgumentPrim("vector?"):
             def fun =
